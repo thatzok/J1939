@@ -13,6 +13,21 @@ pub enum ConnectionManagement {
     Abort = 0xff,
 }
 
+impl TryFrom<u8> for ConnectionManagement {
+    type Error = u8;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x10 => Ok(ConnectionManagement::RequestToSend),
+            0x11 => Ok(ConnectionManagement::ClearToSend),
+            0x13 => Ok(ConnectionManagement::EndOfMessageAcknowledgment),
+            0x20 => Ok(ConnectionManagement::BroadcastAnnounceMessage),
+            0xff => Ok(ConnectionManagement::Abort),
+            _ => Err(value),
+        }
+    }
+}
+
 pub enum BroadcastTransportState {
     ConnectionManagement,
     DataTransfer(u8),
