@@ -1,6 +1,6 @@
 # J1939
 
-[![Rust](https://github.com/Laixer/J1939/actions/workflows/rust.yml/badge.svg)](https://github.com/Laixer/J1939/actions/workflows/rust.yml)
+[![Rust](https://github.com/yorickdewid/J1939/actions/workflows/rust.yml/badge.svg)](https://github.com/yorickdewid/J1939/actions/workflows/rust.yml)
 [![](https://img.shields.io/crates/v/j1939.svg)](https://crates.io/crates/j1939)
 
 A Rust crate for the SAE J1939 automotive protocol.

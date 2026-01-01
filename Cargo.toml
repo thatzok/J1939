@@ -1,10 +1,10 @@
 [package]
 name = "j1939"
 version = "0.2.0"
-authors = ["Laixer Equipment B.V. <info@laixer.com>"]
+authors = ["Yorick de Wid <ydewid@gmail.com>"]
 edition = "2024"
 rust-version = "1.85.0"
-repository = "https://github.com/Laixer/J1939"
+repository = "https://github.com/yorickdewid/J1939"
 description = """
 SAE J1939 is a set of standards that define how ECUs communicate via the CAN bus in heavy-duty vehicles.
 """
