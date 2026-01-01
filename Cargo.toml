@@ -1,25 +1,40 @@
 [package]
 name = "j1939"
-version = "0.1.33"
+version = "0.2.0"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
-edition = "2021"
+edition = "2024"
+rust-version = "1.85.0"
 repository = "https://github.com/Laixer/J1939"
 description = """
 SAE J1939 is a set of standards that define how ECUs communicate via the CAN bus in heavy-duty vehicles.
 """
-categories = ["no-std", "embedded", "parsing"]
-keywords = [
-    "can",
-    "j1939",
-    "sae-j1939",
-    "can-bus",
-    "network"
-]
-license = "GPL-3.0"
+categories = ["no-std", "embedded", "parsing", "network-programming"]
+keywords = ["can", "j1939", "sae-j1939", "automotive", "industrial"]
+license = "GPL-3.0-only"
+readme = "README.md"
+include = ["src/**/*", "examples/**/*", "LICENSE", "README.md"]
 
 [features]
 default = ["chrono"]
-chrono = ["dep:chrono"]
+std = []
+alloc = []
 
 [dependencies]
-chrono = { version = "0.4.38", default-features = false, optional = true }
+chrono = { version = "0.4", default-features = false, optional = true }
+
+[lints.rust]
+unsafe_code = "deny"
+trivial_casts = "warn"
+unused_lifetimes = "warn"
+unused_qualifications = "warn"
+
+[lints.clippy]
+pedantic = "warn"
+unwrap_used = "warn"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = "s"
+panic = "abort"
+strip = true
