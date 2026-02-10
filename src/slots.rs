@@ -41,16 +41,18 @@ pub mod source_address {
         limit_upper: 255.0,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: u8) -> Option<u8> {
         if value == crate::PDU_NOT_AVAILABLE {
             return None;
         }
 
-        Some(RESOLUTION.dec(value as f32) as u8)
+        Some(RESOLUTION.dec(f32::from(value)) as u8)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u8>) -> u8 {
-        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(v as f32) as u8)
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 
@@ -62,16 +64,18 @@ pub mod count {
         limit_upper: 250.0,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: u8) -> Option<u8> {
         if value == crate::PDU_NOT_AVAILABLE {
             return None;
         }
 
-        Some(RESOLUTION.dec(value as f32) as u8)
+        Some(RESOLUTION.dec(f32::from(value)) as u8)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u8>) -> u8 {
-        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(v as f32) as u8)
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 
@@ -83,17 +87,19 @@ pub mod rotational_velocity {
         limit_upper: 8031.875,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: [u8; 2]) -> Option<u16> {
         if value == [crate::PDU_NOT_AVAILABLE; 2] {
             return None;
         }
 
-        Some(RESOLUTION.dec(u16::from_le_bytes(value) as f32) as u16)
+        Some(RESOLUTION.dec(f32::from(u16::from_le_bytes(value))) as u16)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u16>) -> [u8; 2] {
         value.map_or([crate::PDU_NOT_AVAILABLE; 2], |v| {
-            (RESOLUTION.enc(v as f32) as u16).to_le_bytes()
+            (RESOLUTION.enc(f32::from(v)) as u16).to_le_bytes()
         })
     }
 }
@@ -106,17 +112,19 @@ pub mod temperature {
         limit_upper: 1735.0,
     };
 
+    #[allow(clippy::cast_possible_truncation)]
     pub fn dec(value: [u8; 2]) -> Option<i16> {
         if value == [crate::PDU_NOT_AVAILABLE; 2] {
             return None;
         }
 
-        Some(RESOLUTION.dec(i16::from_le_bytes(value) as f32) as i16)
+        Some(RESOLUTION.dec(f32::from(i16::from_le_bytes(value))) as i16)
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     pub fn enc(value: Option<i16>) -> [u8; 2] {
         value.map_or([crate::PDU_NOT_AVAILABLE; 2], |v| {
-            (RESOLUTION.enc(v as f32) as i16).to_le_bytes()
+            (RESOLUTION.enc(f32::from(v)) as i16).to_le_bytes()
         })
     }
 }
@@ -129,16 +137,18 @@ pub mod temperature2 {
         limit_upper: 127.5,
     };
 
+    #[allow(clippy::cast_possible_truncation)]
     pub fn dec(value: u8) -> Option<i8> {
         if value == crate::PDU_NOT_AVAILABLE {
             return None;
         }
 
-        Some(RESOLUTION.dec(value as f32) as i8)
+        Some(RESOLUTION.dec(f32::from(value)) as i8)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<i8>) -> u8 {
-        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(v as f32) as u8)
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 
@@ -150,16 +160,18 @@ pub mod electrical_current {
         limit_upper: 125.0,
     };
 
+    #[allow(clippy::cast_possible_truncation)]
     pub fn dec(value: u8) -> Option<i8> {
         if value == crate::PDU_NOT_AVAILABLE {
             return None;
         }
 
-        Some(RESOLUTION.dec(value as f32) as i8)
+        Some(RESOLUTION.dec(f32::from(value)) as i8)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<i8>) -> u8 {
-        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(v as f32) as u8)
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 
@@ -171,16 +183,18 @@ pub mod electrical_current2 {
         limit_upper: 250.0,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: u8) -> Option<u8> {
         if value == crate::PDU_NOT_AVAILABLE {
             return None;
         }
 
-        Some(RESOLUTION.dec(value as f32) as u8)
+        Some(RESOLUTION.dec(f32::from(value)) as u8)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u8>) -> u8 {
-        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(v as f32) as u8)
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 
@@ -192,17 +206,19 @@ pub mod electrical_voltage {
         limit_upper: 3212.75,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: [u8; 2]) -> Option<u16> {
         if value == [crate::PDU_NOT_AVAILABLE; 2] {
             return None;
         }
 
-        Some(RESOLUTION.dec(u16::from_le_bytes(value) as f32) as u16)
+        Some(RESOLUTION.dec(f32::from(u16::from_le_bytes(value))) as u16)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u16>) -> [u8; 2] {
         value.map_or([crate::PDU_NOT_AVAILABLE; 2], |v| {
-            (RESOLUTION.enc(v as f32) as u16).to_le_bytes()
+            (RESOLUTION.enc(f32::from(v)) as u16).to_le_bytes()
         })
     }
 }
@@ -215,16 +231,18 @@ pub mod position_level {
         limit_upper: 100.5,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: u8) -> Option<u8> {
         if value == crate::PDU_NOT_AVAILABLE {
             return None;
         }
 
-        Some(RESOLUTION.dec(value as f32) as u8)
+        Some(RESOLUTION.dec(f32::from(value)) as u8)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u8>) -> u8 {
-        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(v as f32) as u8)
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 
@@ -237,16 +255,18 @@ pub mod position_level2 {
         limit_upper: 125.5,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: u8) -> Option<u8> {
         if value == crate::PDU_NOT_AVAILABLE {
             return None;
         }
 
-        Some(RESOLUTION.dec(value as f32) as u8)
+        Some(RESOLUTION.dec(f32::from(value)) as u8)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u8>) -> u8 {
-        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(v as f32) as u8)
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 
@@ -258,16 +278,18 @@ pub mod position_level3 {
         limit_upper: 125.0,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: u8) -> Option<u8> {
         if value == crate::PDU_NOT_AVAILABLE {
             return None;
         }
 
-        Some(RESOLUTION.dec(value as f32) as u8)
+        Some(RESOLUTION.dec(f32::from(value)) as u8)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u8>) -> u8 {
-        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(v as f32) as u8)
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 
@@ -280,16 +302,18 @@ pub mod pressure {
         limit_upper: 1000.5,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: u8) -> Option<u8> {
         if value == crate::PDU_NOT_AVAILABLE {
             return None;
         }
 
-        Some(RESOLUTION.dec(value as f32) as u8)
+        Some(RESOLUTION.dec(f32::from(value)) as u8)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u8>) -> u8 {
-        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(v as f32) as u8)
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 
@@ -301,16 +325,18 @@ pub mod pressure2 {
         limit_upper: 12.5,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: u8) -> Option<u8> {
         if value == crate::PDU_NOT_AVAILABLE {
             return None;
         }
 
-        Some(RESOLUTION.dec(value as f32) as u8)
+        Some(RESOLUTION.dec(f32::from(value)) as u8)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u8>) -> u8 {
-        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(v as f32) as u8)
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 
@@ -323,16 +349,18 @@ pub mod pressure3 {
         limit_upper: 500.99,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: u8) -> Option<u8> {
         if value == crate::PDU_NOT_AVAILABLE {
             return None;
         }
 
-        Some(RESOLUTION.dec(value as f32) as u8)
+        Some(RESOLUTION.dec(f32::from(value)) as u8)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u8>) -> u8 {
-        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(v as f32) as u8)
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 
@@ -344,17 +372,19 @@ pub mod pressure4 {
         limit_upper: 251.99,
     };
 
+    #[allow(clippy::cast_possible_truncation)]
     pub fn dec(value: [u8; 2]) -> Option<i16> {
         if value == [crate::PDU_NOT_AVAILABLE; 2] {
             return None;
         }
 
-        Some(RESOLUTION.dec(i16::from_le_bytes(value) as f32) as i16)
+        Some(RESOLUTION.dec(f32::from(i16::from_le_bytes(value))) as i16)
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     pub fn enc(value: Option<i16>) -> [u8; 2] {
         value.map_or([crate::PDU_NOT_AVAILABLE; 2], |v| {
-            (RESOLUTION.enc(v as f32) as i16).to_le_bytes()
+            (RESOLUTION.enc(f32::from(v)) as i16).to_le_bytes()
         })
     }
 }
@@ -367,17 +397,19 @@ pub mod pressure5 {
         limit_upper: 251.0,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn dec(value: [u8; 2]) -> Option<u16> {
         if value == [crate::PDU_NOT_AVAILABLE; 2] {
             return None;
         }
 
-        Some(RESOLUTION.dec(u16::from_le_bytes(value) as f32) as u16)
+        Some(RESOLUTION.dec(f32::from(u16::from_le_bytes(value))) as u16)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn enc(value: Option<u16>) -> [u8; 2] {
         value.map_or([crate::PDU_NOT_AVAILABLE; 2], |v| {
-            (RESOLUTION.enc(v as f32) as u16).to_le_bytes()
+            (RESOLUTION.enc(f32::from(v)) as u16).to_le_bytes()
         })
     }
 }
@@ -387,9 +419,10 @@ pub mod liquid_fuel_usage {
         scale: 0.5,
         offset: 0.0,
         limit_lower: 0.0,
-        limit_upper: 2105540607.5,
+        limit_upper: 2_105_540_607.5,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
     pub fn dec(value: [u8; 4]) -> Option<u32> {
         if value == [crate::PDU_NOT_AVAILABLE; 4] {
             return None;
@@ -398,6 +431,7 @@ pub mod liquid_fuel_usage {
         Some(RESOLUTION.dec(u32::from_le_bytes(value) as f32) as u32)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
     pub fn enc(value: Option<u32>) -> [u8; 4] {
         value.map_or([crate::PDU_NOT_AVAILABLE; 4], |v| {
             (RESOLUTION.enc(v as f32) as u32).to_le_bytes()
@@ -410,9 +444,10 @@ pub mod distance {
         scale: 0.125,
         offset: 0.0,
         limit_lower: 0.0,
-        limit_upper: 526385151.9,
+        limit_upper: 526_385_151.9,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
     pub fn dec(value: [u8; 4]) -> Option<u32> {
         if value == [crate::PDU_NOT_AVAILABLE; 4] {
             return None;
@@ -421,6 +456,7 @@ pub mod distance {
         Some(RESOLUTION.dec(u32::from_le_bytes(value) as f32) as u32)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
     pub fn enc(value: Option<u32>) -> [u8; 4] {
         value.map_or([crate::PDU_NOT_AVAILABLE; 4], |v| {
             (RESOLUTION.enc(v as f32) as u32).to_le_bytes()
@@ -433,9 +469,10 @@ pub mod time {
         scale: 0.05,
         offset: 0.0,
         limit_lower: 0.0,
-        limit_upper: 210554060.75,
+        limit_upper: 210_554_060.75,
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
     pub fn dec(value: [u8; 4]) -> Option<u32> {
         if value == [crate::PDU_NOT_AVAILABLE; 4] {
             return None;
@@ -444,6 +481,7 @@ pub mod time {
         Some(RESOLUTION.dec(u32::from_le_bytes(value) as f32) as u32)
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
     pub fn enc(value: Option<u32>) -> [u8; 4] {
         value.map_or([crate::PDU_NOT_AVAILABLE; 4], |v| {
             (RESOLUTION.enc(v as f32) as u32).to_le_bytes()
@@ -537,25 +575,25 @@ mod tests {
 
     #[test]
     fn liquid_fuel_usage_test_1() {
-        let value = Some(7863247);
+        let value = Some(7_863_247);
         let encoded = liquid_fuel_usage::enc(value);
         let decoded = liquid_fuel_usage::dec(encoded);
-        assert_eq!(decoded, Some(7863247));
+        assert_eq!(decoded, Some(7_863_247));
     }
 
     #[test]
     fn distance_test_1() {
-        let value = Some(123456);
+        let value = Some(123_456);
         let encoded = distance::enc(value);
         let decoded = distance::dec(encoded);
-        assert_eq!(decoded, Some(123456));
+        assert_eq!(decoded, Some(123_456));
     }
 
     #[test]
     fn time_test_1() {
-        let value = Some(123456);
+        let value = Some(123_456);
         let encoded = time::enc(value);
         let decoded = time::dec(encoded);
-        assert_eq!(decoded, Some(123456));
+        assert_eq!(decoded, Some(123_456));
     }
 }

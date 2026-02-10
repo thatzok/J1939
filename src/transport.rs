@@ -43,6 +43,7 @@ pub struct BroadcastTransport {
 }
 
 impl BroadcastTransport {
+    #[must_use]
     pub fn new(sa: u8, pgn: PGN) -> Self {
         Self {
             sa,
@@ -54,6 +55,7 @@ impl BroadcastTransport {
         }
     }
 
+    #[must_use]
     pub fn with_data(mut self, data: &[u8]) -> Self {
         self.data[..data.len()].copy_from_slice(data);
         self.data_length = data.len();
@@ -62,22 +64,26 @@ impl BroadcastTransport {
     }
 
     /// Returns a slice of the transport data.
+    #[must_use]
     pub fn data(&self) -> &[u8] {
         &self.data[..self.tail]
     }
 
     /// Returns the length of the transport data.
     #[inline]
+    #[must_use]
     pub fn len(&self) -> usize {
         self.tail
     }
 
     /// Returns `true` if the transport data is empty.
     #[inline]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.tail == 0
     }
 
+    #[must_use]
     pub fn packet_count(&self) -> usize {
         let quotient = self.data_length / DATA_FRAME_SIZE;
         let remainder = self.data_length % DATA_FRAME_SIZE;
@@ -92,7 +98,9 @@ impl BroadcastTransport {
     pub fn next_frame(&mut self) -> Frame {
         match self.state {
             BroadcastTransportState::ConnectionManagement => {
+                #[allow(clippy::cast_possible_truncation)]
                 let data_length = (self.data_length as u16).to_le_bytes();
+                #[allow(clippy::cast_possible_truncation)]
                 let packets = self.packet_count() as u8;
                 let byte_array = self.pgn.to_le_bytes();
 
@@ -140,7 +148,7 @@ impl BroadcastTransport {
                 if data_chunk.len() == DATA_FRAME_SIZE {
                     payload[1..8].copy_from_slice(data_chunk);
                 } else {
-                    payload[1..(data_chunk.len() + 1)].copy_from_slice(data_chunk);
+                    payload[1..=data_chunk.len()].copy_from_slice(data_chunk);
                 }
 
                 let frame = frame_builder.set_len(8).build();

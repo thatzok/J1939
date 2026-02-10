@@ -20,17 +20,22 @@ pub struct TimeDate {
 }
 
 impl TimeDate {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
-            year: pdu[5] as i32 + 1985,
-            month: pdu[3] as u32,
-            day: (pdu[4] as f32 * 0.25) as u32,
-            hour: pdu[2] as u32,
-            minute: pdu[1] as u32,
-            second: (pdu[0] as f32 * 0.25) as u32,
+            year: i32::from(pdu[5]) + 1985,
+            month: u32::from(pdu[3]),
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            day: (f32::from(pdu[4]) * 0.25) as u32,
+            hour: u32::from(pdu[2]),
+            minute: u32::from(pdu[1]),
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            second: (f32::from(pdu[0]) * 0.25) as u32,
         }
     }
 
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             (self.second * 4) as u8,
@@ -45,6 +50,7 @@ impl TimeDate {
     }
 
     #[cfg(feature = "chrono")]
+    #[must_use]
     pub fn as_date_time(&self) -> chrono::LocalResult<chrono::DateTime<chrono::Utc>> {
         use chrono::TimeZone;
 
@@ -59,6 +65,7 @@ impl TimeDate {
     }
 
     #[cfg(feature = "chrono")]
+    #[must_use]
     pub fn from_date_time(dt: &chrono::DateTime<chrono::Utc>) -> Self {
         use chrono::prelude::*;
 
@@ -95,6 +102,7 @@ pub enum EngineTorqueMode {
 }
 
 impl EngineTorqueMode {
+    #[must_use]
     pub fn from_value(value: u8) -> Option<Self> {
         match value & 0b1111 {
             0b0000 => Some(Self::NoRequest),
@@ -114,6 +122,7 @@ impl EngineTorqueMode {
         }
     }
 
+    #[must_use]
     pub fn to_value(mode: Option<Self>) -> u8 {
         match mode {
             Some(Self::NoRequest) => 0b0000,
@@ -128,8 +137,7 @@ impl EngineTorqueMode {
             Some(Self::HighSpeedGovernor) => 0b1001,
             Some(Self::BrakingSystem) => 0b1010,
             Some(Self::RemoteAccelerator) => 0b1011,
-            Some(Self::Other) => 0b1111,
-            None => 0b1111,
+            Some(Self::Other) | None => 0b1111,
         }
     }
 }
@@ -151,6 +159,7 @@ pub enum EngineStarterMode {
 }
 
 impl EngineStarterMode {
+    #[must_use]
     pub fn from_value(value: u8) -> Option<Self> {
         match value & 0b1111 {
             0b0000 => Some(Self::StartNotRequested),
@@ -169,6 +178,7 @@ impl EngineStarterMode {
         }
     }
 
+    #[must_use]
     pub fn to_value(mode: Option<Self>) -> u8 {
         match mode {
             Some(Self::StartNotRequested) => 0b0000,
@@ -204,6 +214,7 @@ pub struct ElectronicEngineController1Message {
 }
 
 impl ElectronicEngineController1Message {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             engine_torque_mode: EngineTorqueMode::from_value(pdu[0]),
@@ -215,6 +226,7 @@ impl ElectronicEngineController1Message {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             EngineTorqueMode::to_value(self.engine_torque_mode),
@@ -268,6 +280,7 @@ pub struct ElectronicEngineController2Message {
 }
 
 impl ElectronicEngineController2Message {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             accelerator_pedal1_low_idle_switch: slots::bool_from_value(pdu[0]),
@@ -279,6 +292,7 @@ impl ElectronicEngineController2Message {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::bool_to_value(self.accelerator_pedal1_low_idle_switch)
@@ -329,6 +343,7 @@ pub struct ElectronicEngineController3Message {
 }
 
 impl ElectronicEngineController3Message {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             nominal_friction_percent_torque: slots::position_level2::dec(pdu[0]),
@@ -337,6 +352,7 @@ impl ElectronicEngineController3Message {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::position_level2::enc(self.nominal_friction_percent_torque),
@@ -376,6 +392,7 @@ pub enum OverrideControlMode {
 }
 
 impl OverrideControlMode {
+    #[must_use]
     pub fn from_value(value: u8) -> Self {
         match value & 0b11 {
             0b00 => OverrideControlMode::OverrideDisabled,
@@ -386,6 +403,7 @@ impl OverrideControlMode {
         }
     }
 
+    #[must_use]
     pub fn to_value(mode: Self) -> u8 {
         match mode {
             OverrideControlMode::OverrideDisabled => 0b00,
@@ -405,6 +423,7 @@ pub enum RequestedSpeedControlCondition {
 }
 
 impl RequestedSpeedControlCondition {
+    #[must_use]
     pub fn from_value(value: u8) -> Self {
         match value & 0b11 {
             0b00 => RequestedSpeedControlCondition::TransientOptimizedDriveLineDisengaged,
@@ -415,6 +434,7 @@ impl RequestedSpeedControlCondition {
         }
     }
 
+    #[must_use]
     pub fn to_value(condition: Self) -> u8 {
         match condition {
             RequestedSpeedControlCondition::TransientOptimizedDriveLineDisengaged => 0b00,
@@ -434,6 +454,7 @@ pub enum OverrideControlModePriority {
 }
 
 impl OverrideControlModePriority {
+    #[must_use]
     pub fn from_value(value: u8) -> Self {
         match value & 0b11 {
             0b00 => OverrideControlModePriority::HighestPriority,
@@ -444,6 +465,7 @@ impl OverrideControlModePriority {
         }
     }
 
+    #[must_use]
     pub fn to_value(priority: Self) -> u8 {
         match priority {
             OverrideControlModePriority::HighestPriority => 0b00,
@@ -472,6 +494,7 @@ pub struct TorqueSpeedControl1Message {
 }
 
 impl TorqueSpeedControl1Message {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             override_control_mode: OverrideControlMode::from_value(pdu[0]),
@@ -482,6 +505,7 @@ impl TorqueSpeedControl1Message {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             OverrideControlMode::to_value(self.override_control_mode)
@@ -530,12 +554,14 @@ pub struct AmbientConditionsMessage {
 }
 
 impl AmbientConditionsMessage {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
-            barometric_pressure: if pdu[0] != PDU_NOT_AVAILABLE {
-                Some((pdu[0] as f32 * 0.5) as u8)
-            } else {
+            barometric_pressure: if pdu[0] == PDU_NOT_AVAILABLE {
                 None
+            } else {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                Some((f32::from(pdu[0]) * 0.5) as u8)
             },
             cab_interior_temperature: slots::temperature::dec([pdu[1], pdu[2]]),
             ambient_air_temperature: slots::temperature::dec([pdu[3], pdu[4]]),
@@ -544,10 +570,12 @@ impl AmbientConditionsMessage {
         }
     }
 
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             if let Some(pressure) = self.barometric_pressure {
-                (pressure as f32 * 2.0) as u8
+                (f32::from(pressure) * 2.0) as u8
             } else {
                 PDU_NOT_AVAILABLE
             },
@@ -589,21 +617,25 @@ pub struct VehiclePositionMessage {
 }
 
 impl VehiclePositionMessage {
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
-            latitude: if [pdu[0], pdu[1], pdu[2], pdu[3]] != [PDU_NOT_AVAILABLE; 4] {
+            latitude: if [pdu[0], pdu[1], pdu[2], pdu[3]] == [PDU_NOT_AVAILABLE; 4] {
+                None
+            } else {
                 Some((i32::from_le_bytes([pdu[0], pdu[1], pdu[2], pdu[3]]) - 210) as f32 * 1e-7)
-            } else {
-                None
             },
-            longitude: if [pdu[4], pdu[5], pdu[6], pdu[7]] != [PDU_NOT_AVAILABLE; 4] {
-                Some((i32::from_le_bytes([pdu[4], pdu[5], pdu[6], pdu[7]]) - 210) as f32 * 1e-7)
-            } else {
+            longitude: if [pdu[4], pdu[5], pdu[6], pdu[7]] == [PDU_NOT_AVAILABLE; 4] {
                 None
+            } else {
+                Some((i32::from_le_bytes([pdu[4], pdu[5], pdu[6], pdu[7]]) - 210) as f32 * 1e-7)
             },
         }
     }
 
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn to_pdu(&self) -> [u8; 8] {
         let lat_bytes = self
             .latitude
@@ -652,31 +684,35 @@ pub struct FuelEconomyMessage {
 }
 
 impl FuelEconomyMessage {
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
-            fuel_rate: if [pdu[0], pdu[1]] != [PDU_NOT_AVAILABLE; 2] {
-                Some((u16::from_le_bytes([pdu[0], pdu[1]]) as f32 * 0.05).clamp(0.0, 3212.75))
-            } else {
+            fuel_rate: if [pdu[0], pdu[1]] == [PDU_NOT_AVAILABLE; 2] {
                 None
+            } else {
+                Some((f32::from(u16::from_le_bytes([pdu[0], pdu[1]])) * 0.05).clamp(0.0, 3212.75))
             },
-            instantaneous_fuel_economy: if [pdu[2], pdu[3]] != [PDU_NOT_AVAILABLE; 2] {
-                Some(
-                    (u16::from_le_bytes([pdu[2], pdu[3]]) as f32 * (1.0 / 512.0)).clamp(0.0, 125.5),
-                )
-            } else {
+            instantaneous_fuel_economy: if [pdu[2], pdu[3]] == [PDU_NOT_AVAILABLE; 2] {
                 None
+            } else {
+                Some(
+                    (f32::from(u16::from_le_bytes([pdu[2], pdu[3]])) * (1.0 / 512.0)).clamp(0.0, 125.5),
+                )
             },
-            average_fuel_economy: if [pdu[4], pdu[5]] != [PDU_NOT_AVAILABLE; 2] {
-                Some(
-                    (u16::from_le_bytes([pdu[4], pdu[5]]) as f32 * (1.0 / 512.0)).clamp(0.0, 125.5),
-                )
-            } else {
+            average_fuel_economy: if [pdu[4], pdu[5]] == [PDU_NOT_AVAILABLE; 2] {
                 None
+            } else {
+                Some(
+                    (f32::from(u16::from_le_bytes([pdu[4], pdu[5]])) * (1.0 / 512.0)).clamp(0.0, 125.5),
+                )
             },
             throttle_position: slots::position_level::dec(pdu[6]),
         }
     }
 
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn to_pdu(&self) -> [u8; 8] {
         let fuel_rate_bytes = self
             .fuel_rate
@@ -737,6 +773,7 @@ pub struct EngineFluidLevelPressure1Message {
 }
 
 impl EngineFluidLevelPressure1Message {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             fuel_delivery_pressure: slots::pressure::dec(pdu[0]),
@@ -749,6 +786,7 @@ impl EngineFluidLevelPressure1Message {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::pressure::enc(self.fuel_delivery_pressure),
@@ -791,6 +829,7 @@ pub struct FuelConsumptionMessage {
 }
 
 impl FuelConsumptionMessage {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             trip_fuel: slots::liquid_fuel_usage::dec([pdu[0], pdu[1], pdu[2], pdu[3]]),
@@ -798,6 +837,7 @@ impl FuelConsumptionMessage {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::liquid_fuel_usage::enc(self.trip_fuel)[0],
@@ -835,6 +875,7 @@ pub struct VehicleDistanceMessage {
 }
 
 impl VehicleDistanceMessage {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             trip_distance: slots::distance::dec([pdu[0], pdu[1], pdu[2], pdu[3]]),
@@ -842,6 +883,7 @@ impl VehicleDistanceMessage {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::distance::enc(self.trip_distance)[0],
@@ -881,6 +923,7 @@ pub struct ECUHistoryMessage {
 }
 
 impl ECUHistoryMessage {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             total_ecu_distance: slots::distance::dec([pdu[0], pdu[1], pdu[2], pdu[3]]),
@@ -888,6 +931,7 @@ impl ECUHistoryMessage {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::distance::enc(self.total_ecu_distance)[0],
@@ -923,12 +967,14 @@ pub struct CabIlluminationMessage {
 }
 
 impl CabIlluminationMessage {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             illumination_brightness_percent: slots::position_level::dec(pdu[0]),
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::position_level::enc(self.illumination_brightness_percent),
@@ -977,6 +1023,7 @@ pub enum FanDriveState {
 }
 
 impl FanDriveState {
+    #[must_use]
     pub fn from_value(value: u8) -> Option<Self> {
         match value & 0b1111 {
             0b0000 => Some(Self::FanOff),
@@ -998,6 +1045,7 @@ impl FanDriveState {
         }
     }
 
+    #[must_use]
     pub fn to_value(mode: Option<Self>) -> u8 {
         match mode {
             Some(Self::FanOff) => 0b0000,
@@ -1031,6 +1079,7 @@ pub struct FanDriveMessage {
 }
 
 impl FanDriveMessage {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             estimated_percent_fan_speed: slots::position_level::dec(pdu[0]),
@@ -1039,6 +1088,7 @@ impl FanDriveMessage {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::position_level::enc(self.estimated_percent_fan_speed),
@@ -1087,6 +1137,7 @@ pub struct ShutdownMessage {
 }
 
 impl ShutdownMessage {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             idle_shutdown_has_shutdown_engine: slots::bool_from_value(pdu[0]),
@@ -1106,6 +1157,7 @@ impl ShutdownMessage {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::bool_to_value(self.idle_shutdown_has_shutdown_engine)
@@ -1185,6 +1237,7 @@ pub struct PowerTakeoffInformationMessage {
 }
 
 impl PowerTakeoffInformationMessage {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             power_takeoff_oil_temperature: slots::temperature2::dec(pdu[0]),
@@ -1200,6 +1253,7 @@ impl PowerTakeoffInformationMessage {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::temperature2::enc(self.power_takeoff_oil_temperature),
@@ -1260,6 +1314,7 @@ pub struct EngineTemperature1Message {
 }
 
 impl EngineTemperature1Message {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             engine_coolant_temperature: slots::temperature2::dec(pdu[0]),
@@ -1271,6 +1326,7 @@ impl EngineTemperature1Message {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::temperature2::enc(self.engine_coolant_temperature),
@@ -1329,6 +1385,7 @@ pub struct InletExhaustConditions1Message {
 }
 
 impl InletExhaustConditions1Message {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             particulate_trap_inlet_pressure: None,
@@ -1341,6 +1398,7 @@ impl InletExhaustConditions1Message {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             PDU_NOT_AVAILABLE,
@@ -1448,6 +1506,7 @@ pub struct ElectronicBrakeController1Message {
 }
 
 impl ElectronicBrakeController1Message {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             asr_engine_control_active: slots::bool_from_value(pdu[0]),
@@ -1474,6 +1533,7 @@ impl ElectronicBrakeController1Message {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::bool_to_value(self.asr_engine_control_active)
@@ -1542,12 +1602,14 @@ pub struct TankInformation1Message {
 }
 
 impl TankInformation1Message {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             catalyst_tank_level: slots::position_level::dec(pdu[0]),
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::position_level::enc(self.catalyst_tank_level),
@@ -1592,6 +1654,7 @@ pub struct VehicleElectricalPowerMessage {
 }
 
 impl VehicleElectricalPowerMessage {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             net_battery_current: slots::electrical_current::dec(pdu[0]),
@@ -1602,6 +1665,7 @@ impl VehicleElectricalPowerMessage {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::electrical_current::enc(self.net_battery_current),
@@ -1650,6 +1714,7 @@ pub struct EngineFluidLevelPressure2Message {
 }
 
 impl EngineFluidLevelPressure2Message {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             injection_control_pressure: slots::pressure5::dec([pdu[0], pdu[1]]),
@@ -1659,6 +1724,7 @@ impl EngineFluidLevelPressure2Message {
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             slots::pressure5::enc(self.injection_control_pressure)[0],

@@ -83,7 +83,7 @@ pub enum PGN {
     TransportProtocolConnectionManagement,
     /// AC - Address Claimed.
     AddressClaimed,
-    /// PropA - Proprietary A.
+    /// `PropA` - Proprietary A.
     ProprietaryA,
     /// EBC1 - Electronic Brake Controller 1.
     ElectronicBrakeController1,
@@ -153,7 +153,7 @@ pub enum PGN {
     ComponentIdentification,
     /// VI - Vehicle Identification.
     VehicleIdentification,
-    /// PropB - Proprietary B.
+    /// `PropB` - Proprietary B.
     ProprietaryB(u32),
     /// Other PGN.
     Other(u32),
@@ -163,6 +163,7 @@ impl PGN {
     /// Converts the PGN to a little-endian byte array.
     ///
     /// Returns a byte array of length `PGN_MAX_LENGTH` representing the PGN in little-endian format.
+    #[must_use]
     pub fn to_le_bytes(self) -> [u8; PGN_MAX_LENGTH] {
         let byte_array = u32::to_be_bytes(self.into());
 
@@ -172,6 +173,7 @@ impl PGN {
     /// Creates a PGN from a little-endian byte array.
     ///
     /// Returns the PGN created from the byte array.
+    #[must_use]
     pub fn from_le_bytes(bytes: [u8; PGN_MAX_LENGTH]) -> Self {
         let pgn = u32::from_be_bytes([0x0, bytes[2], bytes[1], bytes[0]]);
 
@@ -341,8 +343,7 @@ impl From<PGN> for u32 {
             PGN::AlternateFuel1 => 65_277,
             PGN::AuxiliaryWaterPumpPressure => 65_278,
             PGN::WaterInFuelIndicator => 65_279,
-            PGN::ProprietaryB(value_u32) => value_u32 & 0x3ffff,
-            PGN::Other(value_u32) => value_u32 & 0x3ffff,
+            PGN::ProprietaryB(value_u32) | PGN::Other(value_u32) => value_u32 & 0x3ffff,
         }
     }
 }

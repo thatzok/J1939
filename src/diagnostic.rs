@@ -8,6 +8,7 @@ pub enum LampStatus {
 }
 
 impl LampStatus {
+    #[must_use]
     pub fn from_value(value: u8) -> Option<Self> {
         match value & 0b11 {
             0b00 => Some(Self::Off),
@@ -17,6 +18,7 @@ impl LampStatus {
         }
     }
 
+    #[must_use]
     pub fn to_value(mode: Option<Self>) -> u8 {
         match mode {
             Some(Self::Off) => 0b00,
@@ -35,6 +37,7 @@ pub enum FlashStatus {
 }
 
 impl FlashStatus {
+    #[must_use]
     pub fn from_value(value: u8) -> Option<Self> {
         match value & 0b11 {
             0b00 => Some(Self::Slow),
@@ -44,6 +47,7 @@ impl FlashStatus {
         }
     }
 
+    #[must_use]
     pub fn to_value(mode: Option<Self>) -> u8 {
         match mode {
             Some(Self::Slow) => 0b00,
@@ -70,6 +74,7 @@ pub struct Message1 {
 }
 
 impl Message1 {
+    #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
             protect_lamp: LampStatus::from_value(pdu[0]),
@@ -80,15 +85,16 @@ impl Message1 {
             amber_warning_lamp_flash: FlashStatus::from_value(pdu[1] >> 2),
             red_stop_lamp_flash: FlashStatus::from_value(pdu[1] >> 4),
             malfunction_indicator_lamp_flash: FlashStatus::from_value(pdu[1] >> 6),
-            suspect_parameter_number: (pdu[2] as u32)
-                | ((pdu[3] as u32) << 8)
-                | (((pdu[4] >> 5) as u32 & 0x7) << 16),
+            suspect_parameter_number: u32::from(pdu[2])
+                | (u32::from(pdu[3]) << 8)
+                | ((u32::from(pdu[4] >> 5) & 0x7) << 16),
             failure_mode_identifier: pdu[4] & 0x1F,
             spn_conversion_method: pdu[5] >> 7,
             occurrence_count: pdu[5] & 0x7F,
         }
     }
 
+    #[must_use]
     pub fn to_pdu(&self) -> [u8; 8] {
         [
             LampStatus::to_value(self.protect_lamp)

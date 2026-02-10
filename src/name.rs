@@ -23,6 +23,8 @@ pub struct Name {
 }
 
 impl Name {
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn to_bytes(self) -> [u8; PDU_MAX_LENGTH] {
         let mut bytes = [0; PDU_MAX_LENGTH];
 
@@ -35,15 +37,16 @@ impl Name {
         bytes[6] = self.vehicle_system << 1;
         bytes[7] = self.vehicle_system_instance
             | self.industry_group << 4
-            | ((self.arbitrary_address as u8) << 7);
+            | (u8::from(self.arbitrary_address) << 7);
 
         bytes
     }
 
+    #[must_use]
     pub fn from_bytes(bytes: [u8; PDU_MAX_LENGTH]) -> Self {
         let identity_number =
-            bytes[0] as u32 | ((bytes[1] as u32) << 8) | (((bytes[2] & 0x1f) as u32) << 16);
-        let manufacturer_code = (bytes[2] >> 5) as u16 | ((bytes[3] as u16) << 3);
+            u32::from(bytes[0]) | (u32::from(bytes[1]) << 8) | (u32::from(bytes[2] & 0x1f) << 16);
+        let manufacturer_code = u16::from(bytes[2] >> 5) | (u16::from(bytes[3]) << 3);
         let function_instance = bytes[4] >> 3;
         let ecu_instance = bytes[4] & 0x7;
         let function = bytes[5];
@@ -100,13 +103,15 @@ pub struct NameBuilder {
 impl NameBuilder {
     /// Set the identity number.
     #[inline]
+    #[must_use]
     pub fn identity_number(mut self, identity_number: u32) -> Self {
-        self.identity_number = identity_number & 0x1fffff;
+        self.identity_number = identity_number & 0x001f_ffff;
         self
     }
 
     /// Set the manufacturer code.
     #[inline]
+    #[must_use]
     pub fn manufacturer_code(mut self, manufacturer_code: u16) -> Self {
         self.manufacturer_code = manufacturer_code & 0x7ff;
         self
@@ -114,6 +119,7 @@ impl NameBuilder {
 
     /// Set the function instance.
     #[inline]
+    #[must_use]
     pub fn function_instance(mut self, function_instance: u8) -> Self {
         self.function_instance = function_instance & 0x1f;
         self
@@ -121,6 +127,7 @@ impl NameBuilder {
 
     /// Set the ECU instance.
     #[inline]
+    #[must_use]
     pub fn ecu_instance(mut self, ecu_instance: u8) -> Self {
         self.ecu_instance = ecu_instance & 0x7;
         self
@@ -128,6 +135,7 @@ impl NameBuilder {
 
     /// Set the function.
     #[inline]
+    #[must_use]
     pub fn function(mut self, function: u8) -> Self {
         self.function = function;
         self
@@ -135,6 +143,7 @@ impl NameBuilder {
 
     /// Set the vehicle system.
     #[inline]
+    #[must_use]
     pub fn vehicle_system(mut self, vehicle_system: u8) -> Self {
         self.vehicle_system = vehicle_system;
         self
@@ -142,6 +151,7 @@ impl NameBuilder {
 
     /// Set the vehicle system instance.
     #[inline]
+    #[must_use]
     pub fn vehicle_system_instance(mut self, vehicle_system_instance: u8) -> Self {
         self.vehicle_system_instance = vehicle_system_instance & 0xf;
         self
@@ -149,6 +159,7 @@ impl NameBuilder {
 
     /// Set the industry group.
     #[inline]
+    #[must_use]
     pub fn industry_group(mut self, industry_group: u8) -> Self {
         self.industry_group = industry_group & 0x7;
         self
@@ -156,12 +167,14 @@ impl NameBuilder {
 
     /// Set the arbitrary address.
     #[inline]
+    #[must_use]
     pub fn arbitrary_address(mut self, arbitrary_address: bool) -> Self {
         self.arbitrary_address = arbitrary_address;
         self
     }
 
     /// Construct name.
+    #[must_use]
     pub fn build(self) -> Name {
         Name {
             identity_number: self.identity_number,

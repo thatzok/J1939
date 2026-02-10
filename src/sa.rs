@@ -19,7 +19,7 @@ pub enum SourceAddress {
     ShiftConsolePrimary, // 0x5
     /// Shift Console - Secondary.
     ShiftConsoleSecondary, // 0x6
-    /// Power TakeOff - (Main or Rear).
+    /// Power `TakeOff` - (Main or Rear).
     PowerTakeOffMainRear, // 0x7
     /// Axle - Steering.
     AxleSteering, // 0x8
@@ -79,7 +79,7 @@ pub enum SourceAddress {
     AuxiliaryValveControl, // 0x22
     /// Hitch Control.
     HitchControl, // 0x23
-    /// Power TakeOff (Front or Secondary).
+    /// Power `TakeOff` (Front or Secondary).
     PowerTakeOffFrontSecondary, // 0x24
     /// Off Vehicle Gateway.
     OffVehicleGateway, // 0x25
@@ -232,6 +232,7 @@ pub enum SourceAddress {
 }
 
 impl From<u8> for SourceAddress {
+    #[allow(clippy::too_many_lines)]
     fn from(value: u8) -> Self {
         match value {
             0x0 => SourceAddress::Engine1,
@@ -347,6 +348,7 @@ impl From<u8> for SourceAddress {
 }
 
 impl From<SourceAddress> for u8 {
+    #[allow(clippy::too_many_lines)]
     fn from(value: SourceAddress) -> Self {
         match value {
             SourceAddress::Engine1 => 0x0,
@@ -447,8 +449,7 @@ impl From<SourceAddress> for u8 {
             SourceAddress::SupplyEquipmentCommunicationController => 0x5f,
             SourceAddress::VehicleAdapterCommunicationController => 0x60,
             SourceAddress::FuelCellSystem => 0x61,
-            SourceAddress::SAEReserved(value) => value,
-            SourceAddress::Dynamic(value) => value,
+            SourceAddress::SAEReserved(value) | SourceAddress::Dynamic(value) => value,
             SourceAddress::FileServerPrinter => 0xf8,
             SourceAddress::OffBoardDiagnosticServiceTool1 => 0xf9,
             SourceAddress::OffBoardDiagnosticServiceTool2 => 0xfa,

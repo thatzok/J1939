@@ -3,6 +3,7 @@ use crate::{
 };
 
 /// Create PGN request frame.
+#[must_use]
 pub fn request(da: u8, sa: u8, pgn: PGN) -> Frame {
     let pgn_bytes = pgn.to_le_bytes();
 
@@ -14,11 +15,13 @@ pub fn request(da: u8, sa: u8, pgn: PGN) -> Frame {
 }
 
 /// Extract PGN from PDU.
+#[must_use]
 pub fn request_from_pdu(pdu: &[u8]) -> PGN {
     PGN::from_le_bytes([pdu[0], pdu[1], pdu[2]])
 }
 
 /// Create address claimed frame.
+#[must_use]
 pub fn address_claimed(sa: u8, name: &Name) -> Frame {
     let id = IdBuilder::from_pgn(PGN::AddressClaimed)
         .sa(sa)
@@ -31,6 +34,7 @@ pub fn address_claimed(sa: u8, name: &Name) -> Frame {
 }
 
 /// Create acknowledgment frame.
+#[must_use]
 pub fn acknowledgement(sa: u8, pgn: PGN) -> Frame {
     let pgn_bytes = pgn.to_le_bytes();
 
@@ -54,6 +58,7 @@ pub fn acknowledgement(sa: u8, pgn: PGN) -> Frame {
 }
 
 /// Assign address to node.
+#[must_use]
 pub fn commanded_address(sa: u8, name: &Name, address: u8) -> [Frame; 3] {
     let name_bytes = name.to_bytes();
 

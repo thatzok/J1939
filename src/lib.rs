@@ -29,7 +29,7 @@ pub const PDU_NOT_AVAILABLE: u8 = 0xff;
 pub const FIELD_DELIMITER: u8 = b'*';
 
 /// 29-bit identifier mask.
-pub const ID_BIT_MASK: u32 = 0x1fffffff;
+pub const ID_BIT_MASK: u32 = 0x1fff_ffff;
 
 /// Protocol Data Unit Format.
 ///
@@ -51,12 +51,14 @@ impl Id {
     /// Construct new Frame ID from raw integer.
     ///
     /// The ID is masked to 29 bits to ensure that the ID is within the valid range.
+    #[must_use]
     pub const fn new(id: u32) -> Self {
         Self(id & ID_BIT_MASK)
     }
 
     /// Return ID as raw integer.
     #[inline]
+    #[must_use]
     pub const fn as_raw(&self) -> u32 {
         self.0
     }
@@ -68,20 +70,25 @@ impl Id {
     /// Default priority for informational, proprietary, request and acknowledgement frames is 6.
     /// Default priority for control frames (e.g., speeding up or slowing down the vehicle) is 3.
     #[inline]
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn priority(&self) -> u8 {
-        (self.0 >> 26).try_into().unwrap()
+        (self.0 >> 26) as u8
     }
 
     /// Data page (DP)
     ///
     /// Returns the data page bit of the frame ID.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn data_page(&self) -> u8 {
-        ((self.0 >> 24) & 0x1).try_into().unwrap()
+        ((self.0 >> 24) & 0x1) as u8
     }
 
     /// Parameter Group Number (PGN)
     ///
     /// Returns the parameter group number of the frame ID.
+    #[must_use]
     pub fn pgn(&self) -> PGN {
         self.pgn_raw().into()
     }
@@ -89,6 +96,7 @@ impl Id {
     /// Parameter Group Number
     ///
     /// Returns the raw parameter group number of the frame ID.
+    #[must_use]
     pub fn pgn_raw(&self) -> u32 {
         match self.pdu_format() {
             PDUFormat::PDU1(_) => (self.0 >> 8) & 0xff00,
@@ -99,8 +107,10 @@ impl Id {
     /// PDU Format (PF)
     ///
     /// Returns the PDU format of the frame ID.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn pdu_format(&self) -> PDUFormat {
-        let format: u8 = ((self.0 >> 16) & 0xff).try_into().unwrap();
+        let format: u8 = ((self.0 >> 16) & 0xff) as u8;
         if format & 0xf0 < 0xf0 {
             PDUFormat::PDU1(format)
         } else {
@@ -111,6 +121,7 @@ impl Id {
     /// Test if the frame is a broadcast frame
     ///
     /// Returns true if the frame is a broadcast frame, false otherwise.
+    #[must_use]
     pub fn is_broadcast(&self) -> bool {
         match self.pdu_format() {
             PDUFormat::PDU1(_) => self.destination_address() == Some(0xff),
@@ -123,10 +134,11 @@ impl Id {
     /// Returns the destination address of the frame ID.
     ///
     /// The destination address is only available on PDU1 frames.
+    #[must_use]
     pub fn destination_address(&self) -> Option<u8> {
         match self.pdu_format() {
             PDUFormat::PDU1(_) => Some(self.pdu_specific()),
-            _ => None,
+            PDUFormat::PDU2(_) => None,
         }
     }
 
@@ -135,25 +147,30 @@ impl Id {
     /// Returns the group extension of the frame ID.
     ///
     /// The group extension is only available on PDU2 frames.
+    #[must_use]
     pub fn group_extension(&self) -> Option<u8> {
         match self.pdu_format() {
             PDUFormat::PDU2(_) => Some(self.pdu_specific()),
-            _ => None,
+            PDUFormat::PDU1(_) => None,
         }
     }
 
     /// PDU Specific (PS)
     ///
     /// Returns the PDU specific value of the frame ID.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn pdu_specific(&self) -> u8 {
-        ((self.0 >> 8) & 0xff).try_into().unwrap()
+        ((self.0 >> 8) & 0xff) as u8
     }
 
     /// Device Source Address (SA)
     ///
     /// Returns the source address of the frame ID.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn source_address(&self) -> u8 {
-        (self.0 & 0xff).try_into().unwrap()
+        (self.0 & 0xff) as u8
     }
 }
 
@@ -193,6 +210,7 @@ pub struct IdBuilder {
 
 impl IdBuilder {
     /// Construct ID builder from PGN.
+    #[must_use]
     pub fn from_pgn(pgn: PGN) -> Self {
         Self {
             priority: 6,
@@ -204,6 +222,7 @@ impl IdBuilder {
 
     /// Set the priority.
     #[inline]
+    #[must_use]
     pub fn priority(mut self, priority: u8) -> Self {
         self.priority = priority.min(7);
         self
@@ -212,6 +231,7 @@ impl IdBuilder {
     // TODO: Rename to 'source_address'
     /// Set the sender address.
     #[inline]
+    #[must_use]
     pub fn sa(mut self, address: u8) -> Self {
         self.source_address = address;
         self
@@ -220,17 +240,20 @@ impl IdBuilder {
     // TODO: Rename to 'destination_address'
     /// Set the destination address.
     #[inline]
+    #[must_use]
     pub fn da(mut self, address: u8) -> Self {
         self.destination_address = address;
         self
     }
 
     /// Build frame ID.
+    #[must_use]
     pub fn build(self) -> Id {
-        let mut id = (self.priority as u32) << 26 | self.pgn << 8 | self.source_address as u32;
+        let mut id =
+            u32::from(self.priority) << 26 | self.pgn << 8 | u32::from(self.source_address);
 
         if let PDUFormat::PDU1(_) = Id::new(id).pdu_format() {
-            id |= (self.destination_address as u32) << 8;
+            id |= u32::from(self.destination_address) << 8;
         }
 
         Id::new(id)
@@ -259,6 +282,7 @@ impl Frame {
     /// # Returns
     ///
     /// A new `Frame` instance.
+    #[must_use]
     pub fn new(id: Id, pdu: [u8; PDU_MAX_LENGTH]) -> Self {
         Self {
             id,
@@ -277,6 +301,7 @@ impl Frame {
     /// # Returns
     ///
     /// A new `Frame` instance.
+    #[must_use]
     pub fn from_raw(id: u32, pdu: [u8; PDU_MAX_LENGTH]) -> Self {
         Self {
             id: Id::new(id),
@@ -291,6 +316,7 @@ impl Frame {
     ///
     /// A reference to the `Id` of the frame.
     #[inline]
+    #[must_use]
     pub fn id(&self) -> &Id {
         &self.id
     }
@@ -301,6 +327,7 @@ impl Frame {
     ///
     /// A slice of the PDU data.
     #[inline]
+    #[must_use]
     pub fn pdu(&self) -> &[u8] {
         &self.pdu[..self.pdu_length]
     }
@@ -311,6 +338,7 @@ impl Frame {
     ///
     /// The length of the PDU data.
     #[inline]
+    #[must_use]
     pub fn len(&self) -> usize {
         self.pdu_length
     }
@@ -321,6 +349,7 @@ impl Frame {
     ///
     /// `true` if the PDU data is empty, `false` otherwise.
     #[inline]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.pdu_length == 0
     }
@@ -359,12 +388,14 @@ impl Default for FrameBuilder {
 
 impl FrameBuilder {
     /// Construct new frame builder.
+    #[must_use]
     pub fn new(id: Id) -> Self {
         Self::default().id(id)
     }
 
     /// Set the frame ID.
     #[inline]
+    #[must_use]
     pub fn id(mut self, id: Id) -> Self {
         self.id = id;
         self
@@ -374,6 +405,7 @@ impl FrameBuilder {
     ///
     /// A runtime error will occur if the source slice is
     /// larger than the PDU.
+    #[must_use]
     pub fn copy_from_slice(mut self, src: &[u8]) -> Self {
         let pdu_length = src.len().min(PDU_MAX_LENGTH);
         self.pdu[..pdu_length].copy_from_slice(src);
@@ -383,12 +415,14 @@ impl FrameBuilder {
 
     /// Set PDU length.
     #[inline]
+    #[must_use]
     pub fn set_len(mut self, len: usize) -> Self {
         self.pdu_length = len.min(PDU_MAX_LENGTH);
         self
     }
 
     /// Construct frame.
+    #[must_use]
     pub fn build(self) -> Frame {
         Frame {
             id: self.id,
@@ -410,9 +444,9 @@ mod tests {
 
     #[test]
     fn id_decode_1() {
-        let id = Id::new(0x18EAFF00);
+        let id = Id::new(0x18EA_FF00);
 
-        assert_eq!(id.as_raw(), 0x18EAFF00);
+        assert_eq!(id.as_raw(), 0x18EA_FF00);
         assert_eq!(id.priority(), 6);
         assert_eq!(id.data_page(), 0);
         assert_eq!(id.pgn_raw(), 59904);
@@ -427,9 +461,9 @@ mod tests {
 
     #[test]
     fn id_decode_2() {
-        let id = Id::new(0x18EA687A);
+        let id = Id::new(0x18EA_687A);
 
-        assert_eq!(id.as_raw(), 0x18EA687A);
+        assert_eq!(id.as_raw(), 0x18EA_687A);
         assert_eq!(id.priority(), 6);
         assert_eq!(id.data_page(), 0);
         assert_eq!(id.pgn_raw(), 59904);
@@ -444,9 +478,9 @@ mod tests {
 
     #[test]
     fn id_decode_3() {
-        let id = Id::new(0xCFE6CEE);
+        let id = Id::new(0x0CFE_6CEE);
 
-        assert_eq!(id.as_raw(), 0xCFE6CEE);
+        assert_eq!(id.as_raw(), 0x0CFE_6CEE);
         assert_eq!(id.priority(), 3);
         assert_eq!(id.data_page(), 0);
         assert_eq!(id.pgn_raw(), 65132);
@@ -460,9 +494,9 @@ mod tests {
 
     #[test]
     fn id_decode_4() {
-        let id = Id::new(0xDFE6CEE);
+        let id = Id::new(0x0DFE_6CEE);
 
-        assert_eq!(id.as_raw(), 0xDFE6CEE);
+        assert_eq!(id.as_raw(), 0x0DFE_6CEE);
         assert_eq!(id.priority(), 3);
         assert_eq!(id.data_page(), 1);
         assert_eq!(id.pgn_raw(), 65132);
@@ -481,7 +515,7 @@ mod tests {
             .sa(139)
             .build();
 
-        assert_eq!(id, Id::new(0xCCA008B));
+        assert_eq!(id, Id::new(0x0CCA_008B));
     }
 
     #[test]
@@ -492,7 +526,7 @@ mod tests {
             .sa(139)
             .build();
 
-        assert_eq!(id, Id::new(0xCCA348B));
+        assert_eq!(id, Id::new(0x0CCA_348B));
     }
 
     #[test]
@@ -503,7 +537,7 @@ mod tests {
             .sa(12)
             .build();
 
-        assert_eq!(id, Id::new(0xCF0040C));
+        assert_eq!(id, Id::new(0x0CF0_040C));
         assert_eq!(id.pgn_raw(), 61444);
     }
 
@@ -513,14 +547,14 @@ mod tests {
             .sa(234)
             .build();
 
-        assert_eq!(id, Id::new(0x18FEF7EA));
+        assert_eq!(id, Id::new(0x18FE_F7EA));
     }
 
     #[test]
     fn id_build_5() {
-        let id = IdBuilder::from_pgn(PGN::Other(126720)).sa(234).build();
+        let id = IdBuilder::from_pgn(PGN::Other(126_720)).sa(234).build();
 
-        assert_eq!(id, Id::new(0x19EF00EA));
+        assert_eq!(id, Id::new(0x19EF_00EA));
     }
 
     #[test]
@@ -529,7 +563,7 @@ mod tests {
             .copy_from_slice(&[0x1, 0x2, 0x3])
             .build();
 
-        assert_eq!(frame.id(), &Id::new(0x18EA2010));
+        assert_eq!(frame.id(), &Id::new(0x18EA_2010));
         assert_eq!(frame.pdu(), &[0x1, 0x2, 0x3]);
         assert_eq!(frame.len(), 3);
         assert!(!frame.is_empty());
@@ -546,7 +580,7 @@ mod tests {
         .copy_from_slice(&[PDU_NOT_AVAILABLE; PDU_MAX_LENGTH])
         .build();
 
-        assert_eq!(frame.id(), &Id::new(0xCEE0010));
+        assert_eq!(frame.id(), &Id::new(0x0CEE_0010));
         assert_eq!(frame.pdu(), &[PDU_NOT_AVAILABLE; PDU_MAX_LENGTH]);
         assert_eq!(frame.len(), PDU_MAX_LENGTH);
         assert!(!frame.is_empty());
@@ -556,7 +590,7 @@ mod tests {
     fn frame_build_3() {
         let frame = FrameBuilder::new(IdBuilder::from_pgn(PGN::Transfer).build()).build();
 
-        assert_eq!(frame.id(), &Id::new(0x18CA0000));
+        assert_eq!(frame.id(), &Id::new(0x18CA_0000));
         assert_eq!(frame.pdu(), &[]);
         assert_eq!(frame.len(), 0);
         assert!(frame.is_empty());
@@ -575,7 +609,7 @@ mod tests {
 
         let frame = frame_builder.build();
 
-        assert_eq!(frame.id(), &Id::new(0x18CA0000));
+        assert_eq!(frame.id(), &Id::new(0x18CA_0000));
         assert_eq!(frame.pdu(), &[0x8, 0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1]);
         assert_eq!(frame.len(), PDU_MAX_LENGTH);
         assert!(!frame.is_empty());
