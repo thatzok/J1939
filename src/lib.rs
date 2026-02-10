@@ -403,12 +403,12 @@ impl FrameBuilder {
 
     /// Copy PDU data from slice.
     ///
-    /// A runtime error will occur if the source slice is
-    /// larger than the PDU.
+    /// If the source slice is larger than `PDU_MAX_LENGTH` (8 bytes),
+    /// only the first 8 bytes will be copied.
     #[must_use]
     pub fn copy_from_slice(mut self, src: &[u8]) -> Self {
         let pdu_length = src.len().min(PDU_MAX_LENGTH);
-        self.pdu[..pdu_length].copy_from_slice(src);
+        self.pdu[..pdu_length].copy_from_slice(&src[..pdu_length]);
         self.pdu_length = pdu_length;
         self
     }

@@ -57,9 +57,10 @@ impl BroadcastTransport {
 
     #[must_use]
     pub fn with_data(mut self, data: &[u8]) -> Self {
-        self.data[..data.len()].copy_from_slice(data);
-        self.data_length = data.len();
-        self.tail = data.len();
+        let len = data.len().min(DATA_MAX_LENGTH);
+        self.data[..len].copy_from_slice(&data[..len]);
+        self.data_length = len;
+        self.tail = len;
         self
     }
 
@@ -174,10 +175,20 @@ impl BroadcastTransport {
         } else if pgn == PGN::TransportProtocolDataTransfer {
             let data = frame.as_ref();
             let sequence = data[0];
-            let data_chunk = &data[1..];
 
+            // Validate sequence number: must be 1-255
+            if sequence == 0 {
+                return; // Invalid sequence
+            }
+
+            let data_chunk = &data[1..];
             let start = (sequence as usize - 1) * DATA_FRAME_SIZE;
             let end = start + data_chunk.len();
+
+            // Bounds check: ensure we don't write beyond DATA_MAX_LENGTH
+            if end > DATA_MAX_LENGTH {
+                return; // Out of bounds
+            }
 
             self.tail = self.data_length.min(end);
             self.data[start..end].copy_from_slice(data_chunk);

@@ -20,8 +20,11 @@ pub struct TimeDate {
 }
 
 impl TimeDate {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 6 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 6, "TimeDate::from_pdu requires at least 6 bytes, got {}", pdu.len());
         Self {
             year: i32::from(pdu[5]) + 1985,
             month: u32::from(pdu[3]),
@@ -214,8 +217,11 @@ pub struct ElectronicEngineController1Message {
 }
 
 impl ElectronicEngineController1Message {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 7 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 7, "ElectronicEngineController1Message::from_pdu requires at least 7 bytes, got {}", pdu.len());
         Self {
             engine_torque_mode: EngineTorqueMode::from_value(pdu[0]),
             driver_demand: slots::position_level2::dec(pdu[1]),
@@ -280,8 +286,11 @@ pub struct ElectronicEngineController2Message {
 }
 
 impl ElectronicEngineController2Message {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 4 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 4, "ElectronicEngineController2Message::from_pdu requires at least 4 bytes, got {}", pdu.len());
         Self {
             accelerator_pedal1_low_idle_switch: slots::bool_from_value(pdu[0]),
             accelerator_pedal_kickdown_switch: slots::bool_from_value(pdu[0] >> 2),
@@ -343,8 +352,11 @@ pub struct ElectronicEngineController3Message {
 }
 
 impl ElectronicEngineController3Message {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 4 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 4, "ElectronicEngineController3Message::from_pdu requires at least 4 bytes, got {}", pdu.len());
         Self {
             nominal_friction_percent_torque: slots::position_level2::dec(pdu[0]),
             engines_desired_operating_speed: slots::rotational_velocity::dec([pdu[1], pdu[2]]),
@@ -494,8 +506,11 @@ pub struct TorqueSpeedControl1Message {
 }
 
 impl TorqueSpeedControl1Message {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 4 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 4, "TorqueSpeedControl1Message::from_pdu requires at least 4 bytes, got {}", pdu.len());
         Self {
             override_control_mode: OverrideControlMode::from_value(pdu[0]),
             speed_control_condition: RequestedSpeedControlCondition::from_value(pdu[0] >> 2),
@@ -554,8 +569,11 @@ pub struct AmbientConditionsMessage {
 }
 
 impl AmbientConditionsMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "AmbientConditionsMessage::from_pdu requires at least 8 bytes, got {}", pdu.len());
         Self {
             barometric_pressure: if pdu[0] == PDU_NOT_AVAILABLE {
                 None
@@ -617,9 +635,12 @@ pub struct VehiclePositionMessage {
 }
 
 impl VehiclePositionMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "VehiclePositionMessage::from_pdu requires at least 8 bytes, got {}", pdu.len());
         Self {
             latitude: if [pdu[0], pdu[1], pdu[2], pdu[3]] == [PDU_NOT_AVAILABLE; 4] {
                 None
@@ -684,9 +705,12 @@ pub struct FuelEconomyMessage {
 }
 
 impl FuelEconomyMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 7 bytes.
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 7, "FuelEconomyMessage::from_pdu requires at least 7 bytes, got {}", pdu.len());
         Self {
             fuel_rate: if [pdu[0], pdu[1]] == [PDU_NOT_AVAILABLE; 2] {
                 None
@@ -773,8 +797,11 @@ pub struct EngineFluidLevelPressure1Message {
 }
 
 impl EngineFluidLevelPressure1Message {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "EngineFluidLevelPressure1Message::from_pdu requires at least 8 bytes, got {}", pdu.len());
         Self {
             fuel_delivery_pressure: slots::pressure::dec(pdu[0]),
             extended_crankcase_blow_by_pressure: slots::pressure2::dec(pdu[1]),
@@ -829,8 +856,11 @@ pub struct FuelConsumptionMessage {
 }
 
 impl FuelConsumptionMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "FuelConsumptionMessage::from_pdu requires at least 8 bytes, got {}", pdu.len());
         Self {
             trip_fuel: slots::liquid_fuel_usage::dec([pdu[0], pdu[1], pdu[2], pdu[3]]),
             total_fuel_used: slots::liquid_fuel_usage::dec([pdu[4], pdu[5], pdu[6], pdu[7]]),
@@ -875,8 +905,11 @@ pub struct VehicleDistanceMessage {
 }
 
 impl VehicleDistanceMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "VehicleDistanceMessage::from_pdu requires at least 8 bytes, got {}", pdu.len());
         Self {
             trip_distance: slots::distance::dec([pdu[0], pdu[1], pdu[2], pdu[3]]),
             total_vehicle_distance: slots::distance::dec([pdu[4], pdu[5], pdu[6], pdu[7]]),
@@ -923,8 +956,11 @@ pub struct ECUHistoryMessage {
 }
 
 impl ECUHistoryMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "ECUHistoryMessage::from_pdu requires at least 8 bytes, got {}", pdu.len());
         Self {
             total_ecu_distance: slots::distance::dec([pdu[0], pdu[1], pdu[2], pdu[3]]),
             total_ecu_run_time: slots::time::dec([pdu[4], pdu[5], pdu[6], pdu[7]]),
@@ -967,8 +1003,11 @@ pub struct CabIlluminationMessage {
 }
 
 impl CabIlluminationMessage {
+    /// # Panics
+    /// Panics if `pdu` is empty.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(!pdu.is_empty(), "CabIlluminationMessage::from_pdu requires at least 1 byte, got 0");
         Self {
             illumination_brightness_percent: slots::position_level::dec(pdu[0]),
         }
@@ -1079,8 +1118,11 @@ pub struct FanDriveMessage {
 }
 
 impl FanDriveMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 4 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 4, "FanDriveMessage::from_pdu requires at least 4 bytes, got {}", pdu.len());
         Self {
             estimated_percent_fan_speed: slots::position_level::dec(pdu[0]),
             fan_drive_state: FanDriveState::from_value(pdu[1]),
@@ -1137,8 +1179,11 @@ pub struct ShutdownMessage {
 }
 
 impl ShutdownMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 6 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 6, "ShutdownMessage::from_pdu requires at least 6 bytes, got {}", pdu.len());
         Self {
             idle_shutdown_has_shutdown_engine: slots::bool_from_value(pdu[0]),
             idle_shutdown_driver_alert_mode: slots::bool_from_value(pdu[0] >> 2),
@@ -1237,8 +1282,11 @@ pub struct PowerTakeoffInformationMessage {
 }
 
 impl PowerTakeoffInformationMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 7 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 7, "PowerTakeoffInformationMessage::from_pdu requires at least 7 bytes, got {}", pdu.len());
         Self {
             power_takeoff_oil_temperature: slots::temperature2::dec(pdu[0]),
             power_takeoff_speed: slots::rotational_velocity::dec([pdu[1], pdu[2]]),
@@ -1314,8 +1362,11 @@ pub struct EngineTemperature1Message {
 }
 
 impl EngineTemperature1Message {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "EngineTemperature1Message::from_pdu requires at least 8 bytes, got {}", pdu.len());
         Self {
             engine_coolant_temperature: slots::temperature2::dec(pdu[0]),
             fuel_temperature: slots::temperature2::dec(pdu[1]),
@@ -1385,8 +1436,11 @@ pub struct InletExhaustConditions1Message {
 }
 
 impl InletExhaustConditions1Message {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 7 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 7, "InletExhaustConditions1Message::from_pdu requires at least 7 bytes, got {}", pdu.len());
         Self {
             particulate_trap_inlet_pressure: None,
             boost_pressure: slots::pressure3::dec(pdu[1]),
@@ -1506,8 +1560,11 @@ pub struct ElectronicBrakeController1Message {
 }
 
 impl ElectronicBrakeController1Message {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "ElectronicBrakeController1Message::from_pdu requires at least 8 bytes, got {}", pdu.len());
         Self {
             asr_engine_control_active: slots::bool_from_value(pdu[0]),
             asr_brake_control_active: slots::bool_from_value(pdu[0] >> 2),
@@ -1602,8 +1659,11 @@ pub struct TankInformation1Message {
 }
 
 impl TankInformation1Message {
+    /// # Panics
+    /// Panics if `pdu` is empty.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(!pdu.is_empty(), "TankInformation1Message::from_pdu requires at least 1 byte, got 0");
         Self {
             catalyst_tank_level: slots::position_level::dec(pdu[0]),
         }
@@ -1654,8 +1714,11 @@ pub struct VehicleElectricalPowerMessage {
 }
 
 impl VehicleElectricalPowerMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "VehicleElectricalPowerMessage::from_pdu requires at least 8 bytes, got {}", pdu.len());
         Self {
             net_battery_current: slots::electrical_current::dec(pdu[0]),
             alternator_current: slots::electrical_current2::dec(pdu[1]),
@@ -1714,8 +1777,11 @@ pub struct EngineFluidLevelPressure2Message {
 }
 
 impl EngineFluidLevelPressure2Message {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "EngineFluidLevelPressure2Message::from_pdu requires at least 8 bytes, got {}", pdu.len());
         Self {
             injection_control_pressure: slots::pressure5::dec([pdu[0], pdu[1]]),
             injector_metering_rail1_pressure: slots::pressure5::dec([pdu[2], pdu[3]]),

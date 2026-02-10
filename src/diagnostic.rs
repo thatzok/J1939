@@ -74,8 +74,15 @@ pub struct Message1 {
 }
 
 impl Message1 {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 6 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(
+            pdu.len() >= 6,
+            "DM1 Message1 requires at least 6 bytes, got {}",
+            pdu.len()
+        );
         Self {
             protect_lamp: LampStatus::from_value(pdu[0]),
             amber_warning_lamp: LampStatus::from_value(pdu[0] >> 2),
