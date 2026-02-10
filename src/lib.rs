@@ -111,7 +111,7 @@ impl Id {
     #[allow(clippy::cast_possible_truncation)]
     pub fn pdu_format(&self) -> PDUFormat {
         let format: u8 = ((self.0 >> 16) & 0xff) as u8;
-        if format & 0xf0 < 0xf0 {
+        if format < 0xf0 {
             PDUFormat::PDU1(format)
         } else {
             PDUFormat::PDU2(format)
@@ -625,5 +625,85 @@ mod tests {
         assert_eq!(frame.pdu(), &[PDU_NOT_AVAILABLE; PDU_MAX_LENGTH]);
         assert_eq!(frame.len(), PDU_MAX_LENGTH);
         assert!(!frame.is_empty());
+    }
+
+    #[test]
+    fn pdu_format_boundary() {
+        // Test PDU1/PDU2 boundary at PF=240 (0xF0)
+        let pdu1_max = Id::new(0x0CEF_FF00); // PF=239 (0xEF) - should be PDU1
+        let pdu2_min = Id::new(0x0CF0_0000); // PF=240 (0xF0) - should be PDU2
+
+        assert!(matches!(pdu1_max.pdu_format(), PDUFormat::PDU1(_)));
+        assert!(matches!(pdu2_min.pdu_format(), PDUFormat::PDU2(_)));
+
+        // Verify destination address only on PDU1
+        assert!(pdu1_max.destination_address().is_some());
+        assert!(pdu2_min.destination_address().is_none());
+
+        // Verify group extension only on PDU2
+        assert!(pdu1_max.group_extension().is_none());
+        assert!(pdu2_min.group_extension().is_some());
+    }
+
+    #[test]
+    fn id_29bit_mask() {
+        // Test that IDs are properly masked to 29 bits
+        let over_29bits = 0xFFFF_FFFF;
+        let id = Id::new(over_29bits);
+
+        assert_eq!(id.as_raw(), 0x1FFF_FFFF); // Should be masked to 29 bits
+        assert!(id.as_raw() <= 0x1FFF_FFFF);
+    }
+
+    #[test]
+    fn priority_range() {
+        // Test priority is clamped to 0-7
+        let id = IdBuilder::from_pgn(PGN::Request)
+            .priority(255) // Invalid priority
+            .sa(0x10)
+            .build();
+
+        assert_eq!(id.priority(), 7); // Should be clamped to max value 7
+    }
+
+    #[test]
+    fn frame_empty() {
+        // Test empty frame handling
+        let frame = FrameBuilder::new(Id::new(0)).build();
+
+        assert!(frame.is_empty());
+        assert_eq!(frame.len(), 0);
+        assert_eq!(frame.pdu(), &[]);
+    }
+
+    #[test]
+    fn frame_zero_length_slice() {
+        // Test copying empty slice
+        let frame = FrameBuilder::new(Id::new(0x18EA_0000))
+            .copy_from_slice(&[])
+            .build();
+
+        assert!(frame.is_empty());
+        assert_eq!(frame.len(), 0);
+    }
+
+    #[test]
+    fn pgn_extraction_pdu1_zeros_ps() {
+        // Test that PGN extraction zeros out PS byte for PDU1
+        let id = Id::new(0x0CEA_5500); // PF=EA (234, PDU1), PS=55, SA=00
+
+        // For PDU1, PS is destination address, not part of PGN
+        assert_eq!(id.pgn_raw(), 0xEA00); // Should have PS=00
+        assert!(id.pgn_raw() & 0xFF == 0); // Low byte should be zero
+    }
+
+    #[test]
+    fn pgn_extraction_pdu2_includes_ps() {
+        // Test that PGN extraction includes PS byte for PDU2
+        let id = Id::new(0x0CFE_6C00); // PF=FE (254, PDU2), PS=6C, SA=00
+
+        // For PDU2, PS is group extension, part of PGN
+        assert_eq!(id.pgn_raw(), 0xFE6C);
+        assert!(id.pgn_raw() & 0xFF != 0); // Low byte should be non-zero
     }
 }

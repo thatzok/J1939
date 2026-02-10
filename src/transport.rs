@@ -271,4 +271,70 @@ mod tests {
             &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09]
         );
     }
+
+    #[test]
+    fn test_oversized_data() {
+        // Test that oversized data is clamped to DATA_MAX_LENGTH (1785 bytes)
+        let large_data = [0xAB; DATA_MAX_LENGTH + 100];
+        let transport = BroadcastTransport::new(0x01, PGN::AddressClaimed)
+            .with_data(&large_data);
+
+        // Should clamp to DATA_MAX_LENGTH
+        assert_eq!(transport.len(), DATA_MAX_LENGTH);
+        assert_eq!(transport.data().len(), DATA_MAX_LENGTH);
+        assert!(transport.data().iter().all(|&b| b == 0xAB));
+    }
+
+    #[test]
+    fn test_invalid_sequence_zero() {
+        // Test that sequence number 0 is rejected (should be 1-255)
+        let mut transport = BroadcastTransport::new(0x01, PGN::AddressClaimed);
+
+        // First, receive the connection management frame announcing 9 bytes
+        let cm_frame = [0x20, 0x09, 0x00, 0x02, 0xFF, 0x00, 0xEE, 0x00];
+        transport.from_frame(
+            &FrameBuilder::new(Id::new(0x1CECFF01))
+                .copy_from_slice(&cm_frame)
+                .build(),
+        );
+
+        // Verify CM was processed
+        assert_eq!(transport.data_length, 9);
+
+        // Now try to receive a data frame with sequence 0 (invalid)
+        let invalid_frame = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
+        transport.from_frame(
+            &FrameBuilder::new(Id::new(0x1CEBFF01))
+                .copy_from_slice(&invalid_frame)
+                .build(),
+        );
+
+        // tail should still be 0 (frame rejected due to invalid sequence)
+        assert_eq!(transport.tail, 0);
+    }
+
+    #[test]
+    fn test_max_packets() {
+        // Test with maximum packet count (255 packets * 7 bytes = 1785 bytes)
+        let max_data = [0xCC; DATA_MAX_LENGTH];
+        let transport = BroadcastTransport::new(0x01, PGN::ProprietaryA)
+            .with_data(&max_data);
+
+        let expected_packets = (DATA_MAX_LENGTH + DATA_FRAME_SIZE - 1) / DATA_FRAME_SIZE;
+        assert_eq!(transport.packet_count(), expected_packets);
+        assert_eq!(transport.len(), DATA_MAX_LENGTH);
+
+        // Verify all data is present
+        assert_eq!(transport.data(), &max_data[..]);
+    }
+
+    #[test]
+    fn test_empty_transport() {
+        // Test transport with no data
+        let transport = BroadcastTransport::new(0x01, PGN::Request);
+
+        assert_eq!(transport.len(), 0);
+        assert!(transport.is_empty());
+        assert_eq!(transport.packet_count(), 0);
+    }
 }
