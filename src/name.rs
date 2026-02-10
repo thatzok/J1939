@@ -28,15 +28,24 @@ impl Name {
     pub fn to_bytes(self) -> [u8; PDU_MAX_LENGTH] {
         let mut bytes = [0; PDU_MAX_LENGTH];
 
-        bytes[0] = self.identity_number as u8;
-        bytes[1] = (self.identity_number >> 8) as u8;
-        bytes[2] = ((self.identity_number >> 16) as u8) | ((self.manufacturer_code << 5) as u8);
-        bytes[3] = (self.manufacturer_code >> 3) as u8;
-        bytes[4] = (self.function_instance << 3) | self.ecu_instance;
+        // Mask fields to enforce bit width invariants per J1939 NAME field spec
+        let identity_number = self.identity_number & 0x001f_ffff; // 21 bits
+        let manufacturer_code = self.manufacturer_code & 0x7ff; // 11 bits
+        let function_instance = self.function_instance & 0x1f; // 5 bits
+        let ecu_instance = self.ecu_instance & 0x7; // 3 bits
+        let vehicle_system = self.vehicle_system & 0x7f; // 7 bits
+        let vehicle_system_instance = self.vehicle_system_instance & 0xf; // 4 bits
+        let industry_group = self.industry_group & 0x7; // 3 bits
+
+        bytes[0] = identity_number as u8;
+        bytes[1] = (identity_number >> 8) as u8;
+        bytes[2] = ((identity_number >> 16) as u8) | ((manufacturer_code << 5) as u8);
+        bytes[3] = (manufacturer_code >> 3) as u8;
+        bytes[4] = (function_instance << 3) | ecu_instance;
         bytes[5] = self.function;
-        bytes[6] = self.vehicle_system << 1;
-        bytes[7] = self.vehicle_system_instance
-            | self.industry_group << 4
+        bytes[6] = vehicle_system << 1;
+        bytes[7] = vehicle_system_instance
+            | (industry_group << 4)
             | (u8::from(self.arbitrary_address) << 7);
 
         bytes
@@ -145,7 +154,7 @@ impl NameBuilder {
     #[inline]
     #[must_use]
     pub fn vehicle_system(mut self, vehicle_system: u8) -> Self {
-        self.vehicle_system = vehicle_system;
+        self.vehicle_system = vehicle_system & 0x7f;
         self
     }
 
