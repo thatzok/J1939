@@ -80,7 +80,9 @@ impl Message1 {
             amber_warning_lamp_flash: FlashStatus::from_value(pdu[1] >> 2),
             red_stop_lamp_flash: FlashStatus::from_value(pdu[1] >> 4),
             malfunction_indicator_lamp_flash: FlashStatus::from_value(pdu[1] >> 6),
-            suspect_parameter_number: u32::from_le_bytes([pdu[2], pdu[3], pdu[4] >> 6, 0]),
+            suspect_parameter_number: (pdu[2] as u32)
+                | ((pdu[3] as u32) << 8)
+                | (((pdu[4] >> 5) as u32 & 0x7) << 16),
             failure_mode_identifier: pdu[4] & 0x1F,
             spn_conversion_method: pdu[5] >> 7,
             occurrence_count: pdu[5] & 0x7F,
@@ -99,7 +101,7 @@ impl Message1 {
                 | FlashStatus::to_value(self.malfunction_indicator_lamp_flash) << 6,
             (self.suspect_parameter_number & 0xFF) as u8,
             ((self.suspect_parameter_number >> 8) & 0xFF) as u8,
-            ((self.suspect_parameter_number >> 16) & 0x3F) as u8
+            (((self.suspect_parameter_number >> 16) & 0x7) as u8) << 5
                 | (self.failure_mode_identifier & 0x1F),
             (self.spn_conversion_method & 0x01) << 7 | (self.occurrence_count & 0x7F),
             PDU_NOT_AVAILABLE,
@@ -293,5 +295,49 @@ mod tests {
             diagnostic_message_decoded.malfunction_indicator_lamp_flash,
             Some(FlashStatus::Fast)
         );
+    }
+
+    #[test]
+    fn diagnostic_1_message_large_spn() {
+        // SPN 524287 (0x7FFFF) = max 19-bit value, FMI = 3
+        // Byte 2: 0xFF (SPN bits 7:0)
+        // Byte 3: 0xFF (SPN bits 15:8)
+        // Byte 4: 0xE3 = (0x7 << 5) | 3 = SPN bits 18:16 in bits 7:5, FMI in bits 4:0
+        let diagnostic_message = Message1::from_pdu(&[0x00, 0xFF, 0xFF, 0xFF, 0xE3, 0x00]);
+
+        assert_eq!(diagnostic_message.suspect_parameter_number, 524287);
+        assert_eq!(diagnostic_message.failure_mode_identifier, 3);
+    }
+
+    #[test]
+    fn diagnostic_1_message_large_spn_roundtrip() {
+        // SPN 190000 (0x2E630), FMI = 12
+        // Byte 2: 0x30 (SPN bits 7:0)
+        // Byte 3: 0xE6 (SPN bits 15:8)
+        // Byte 4: (0x2 << 5) | 12 = 0x4C (SPN bits 18:16 in bits 7:5, FMI in bits 4:0)
+        let original = Message1 {
+            protect_lamp: Some(LampStatus::Off),
+            amber_warning_lamp: Some(LampStatus::Off),
+            red_stop_lamp: Some(LampStatus::Off),
+            malfunction_indicator_lamp: Some(LampStatus::Off),
+            protect_lamp_flash: None,
+            amber_warning_lamp_flash: None,
+            red_stop_lamp_flash: None,
+            malfunction_indicator_lamp_flash: None,
+            suspect_parameter_number: 190000,
+            failure_mode_identifier: 12,
+            spn_conversion_method: 0,
+            occurrence_count: 5,
+        };
+
+        let encoded = original.to_pdu();
+        let decoded = Message1::from_pdu(&encoded);
+
+        assert_eq!(decoded.suspect_parameter_number, 190000);
+        assert_eq!(decoded.failure_mode_identifier, 12);
+        assert_eq!(decoded.occurrence_count, 5);
+
+        // Verify byte 4 layout: SPN high bits in 7:5, FMI in 4:0
+        assert_eq!(encoded[4], (0x2 << 5) | 12);
     }
 }

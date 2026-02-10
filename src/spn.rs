@@ -591,12 +591,12 @@ pub struct VehiclePositionMessage {
 impl VehiclePositionMessage {
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
-            latitude: if pdu[0] != PDU_NOT_AVAILABLE {
+            latitude: if [pdu[0], pdu[1], pdu[2], pdu[3]] != [PDU_NOT_AVAILABLE; 4] {
                 Some((i32::from_le_bytes([pdu[0], pdu[1], pdu[2], pdu[3]]) - 210) as f32 * 1e-7)
             } else {
                 None
             },
-            longitude: if pdu[4] != PDU_NOT_AVAILABLE {
+            longitude: if [pdu[4], pdu[5], pdu[6], pdu[7]] != [PDU_NOT_AVAILABLE; 4] {
                 Some((i32::from_le_bytes([pdu[4], pdu[5], pdu[6], pdu[7]]) - 210) as f32 * 1e-7)
             } else {
                 None
@@ -605,47 +605,20 @@ impl VehiclePositionMessage {
     }
 
     pub fn to_pdu(&self) -> [u8; 8] {
+        let lat_bytes = self
+            .latitude
+            .map_or([PDU_NOT_AVAILABLE; 4], |v| {
+                ((v * 1e7) as i32 + 210).to_le_bytes()
+            });
+        let lon_bytes = self
+            .longitude
+            .map_or([PDU_NOT_AVAILABLE; 4], |v| {
+                ((v * 1e7) as i32 + 210).to_le_bytes()
+            });
+
         [
-            if let Some(latitude) = self.latitude {
-                ((latitude * 1e7) as i32 + 210).to_le_bytes()[0]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(latitude) = self.latitude {
-                ((latitude * 1e7) as i32 + 210).to_le_bytes()[1]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(latitude) = self.latitude {
-                ((latitude * 1e7) as i32 + 210).to_le_bytes()[2]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(latitude) = self.latitude {
-                ((latitude * 1e7) as i32 + 210).to_le_bytes()[3]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(longitude) = self.longitude {
-                ((longitude * 1e7) as i32 + 210).to_le_bytes()[0]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(longitude) = self.longitude {
-                ((longitude * 1e7) as i32 + 210).to_le_bytes()[1]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(longitude) = self.longitude {
-                ((longitude * 1e7) as i32 + 210).to_le_bytes()[2]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(longitude) = self.longitude {
-                ((longitude * 1e7) as i32 + 210).to_le_bytes()[3]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
+            lat_bytes[0], lat_bytes[1], lat_bytes[2], lat_bytes[3],
+            lon_bytes[0], lon_bytes[1], lon_bytes[2], lon_bytes[3],
         ]
     }
 }
@@ -681,19 +654,19 @@ pub struct FuelEconomyMessage {
 impl FuelEconomyMessage {
     pub fn from_pdu(pdu: &[u8]) -> Self {
         Self {
-            fuel_rate: if pdu[0] != PDU_NOT_AVAILABLE {
+            fuel_rate: if [pdu[0], pdu[1]] != [PDU_NOT_AVAILABLE; 2] {
                 Some((u16::from_le_bytes([pdu[0], pdu[1]]) as f32 * 0.05).clamp(0.0, 3212.75))
             } else {
                 None
             },
-            instantaneous_fuel_economy: if pdu[2] != PDU_NOT_AVAILABLE {
+            instantaneous_fuel_economy: if [pdu[2], pdu[3]] != [PDU_NOT_AVAILABLE; 2] {
                 Some(
                     (u16::from_le_bytes([pdu[2], pdu[3]]) as f32 * (1.0 / 512.0)).clamp(0.0, 125.5),
                 )
             } else {
                 None
             },
-            average_fuel_economy: if pdu[4] != PDU_NOT_AVAILABLE {
+            average_fuel_economy: if [pdu[4], pdu[5]] != [PDU_NOT_AVAILABLE; 2] {
                 Some(
                     (u16::from_le_bytes([pdu[4], pdu[5]]) as f32 * (1.0 / 512.0)).clamp(0.0, 125.5),
                 )
@@ -705,37 +678,23 @@ impl FuelEconomyMessage {
     }
 
     pub fn to_pdu(&self) -> [u8; 8] {
+        let fuel_rate_bytes = self
+            .fuel_rate
+            .map_or([PDU_NOT_AVAILABLE; 2], |v| ((v * 20.0) as u16).to_le_bytes());
+        let inst_bytes = self
+            .instantaneous_fuel_economy
+            .map_or([PDU_NOT_AVAILABLE; 2], |v| ((v * 512.0) as u16).to_le_bytes());
+        let avg_bytes = self
+            .average_fuel_economy
+            .map_or([PDU_NOT_AVAILABLE; 2], |v| ((v * 512.0) as u16).to_le_bytes());
+
         [
-            if let Some(fuel_rate) = self.fuel_rate {
-                ((fuel_rate * 20.0) as u16).to_le_bytes()[0]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(fuel_rate) = self.fuel_rate {
-                ((fuel_rate * 20.0) as u16).to_le_bytes()[1]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(instantaneous_fuel_economy) = self.instantaneous_fuel_economy {
-                ((instantaneous_fuel_economy * 512.0) as u16).to_le_bytes()[0]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(instantaneous_fuel_economy) = self.instantaneous_fuel_economy {
-                ((instantaneous_fuel_economy * 512.0) as u16).to_le_bytes()[1]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(average_fuel_economy) = self.average_fuel_economy {
-                ((average_fuel_economy * 512.0) as u16).to_le_bytes()[0]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
-            if let Some(average_fuel_economy) = self.average_fuel_economy {
-                ((average_fuel_economy * 512.0) as u16).to_le_bytes()[1]
-            } else {
-                PDU_NOT_AVAILABLE
-            },
+            fuel_rate_bytes[0],
+            fuel_rate_bytes[1],
+            inst_bytes[0],
+            inst_bytes[1],
+            avg_bytes[0],
+            avg_bytes[1],
             self.throttle_position.unwrap_or(PDU_NOT_AVAILABLE),
             PDU_NOT_AVAILABLE,
         ]
@@ -2337,5 +2296,69 @@ mod tests {
             engine_fluid_message_decoded.injector_metering_rail2_pressure,
             Some(241)
         );
+    }
+
+    #[test]
+    fn vehicle_position_not_available() {
+        // All 0xFF = not available
+        let msg = VehiclePositionMessage::from_pdu(&[0xFF; 8]);
+        assert_eq!(msg.latitude, None);
+        assert_eq!(msg.longitude, None);
+    }
+
+    #[test]
+    fn vehicle_position_first_byte_0xff() {
+        // First byte is 0xFF but the full 4-byte field is NOT all-0xFF,
+        // so this should be treated as a valid value, not "not available"
+        let pdu = [0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00];
+        let msg = VehiclePositionMessage::from_pdu(&pdu);
+        assert!(msg.latitude.is_some());
+        assert!(msg.longitude.is_some());
+    }
+
+    #[test]
+    fn vehicle_position_roundtrip() {
+        let msg = VehiclePositionMessage {
+            latitude: Some(52.0),
+            longitude: Some(4.5),
+        };
+        let encoded = msg.to_pdu();
+        let decoded = VehiclePositionMessage::from_pdu(&encoded);
+        // f32 round-trip tolerance
+        assert!((decoded.latitude.unwrap() - 52.0).abs() < 0.01);
+        assert!((decoded.longitude.unwrap() - 4.5).abs() < 0.01);
+    }
+
+    #[test]
+    fn vehicle_position_none_roundtrip() {
+        let msg = VehiclePositionMessage {
+            latitude: None,
+            longitude: None,
+        };
+        let encoded = msg.to_pdu();
+        assert_eq!(encoded, [0xFF; 8]);
+        let decoded = VehiclePositionMessage::from_pdu(&encoded);
+        assert_eq!(decoded.latitude, None);
+        assert_eq!(decoded.longitude, None);
+    }
+
+    #[test]
+    fn fuel_economy_not_available() {
+        let msg = FuelEconomyMessage::from_pdu(&[0xFF; 8]);
+        assert_eq!(msg.fuel_rate, None);
+        assert_eq!(msg.instantaneous_fuel_economy, None);
+        assert_eq!(msg.average_fuel_economy, None);
+        assert_eq!(msg.throttle_position, None);
+    }
+
+    #[test]
+    fn fuel_economy_first_byte_0xff() {
+        // First byte of each 2-byte field is 0xFF but second is not,
+        // so these should be treated as valid values
+        let pdu = [0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x50, 0xFF];
+        let msg = FuelEconomyMessage::from_pdu(&pdu);
+        assert!(msg.fuel_rate.is_some());
+        assert!(msg.instantaneous_fuel_economy.is_some());
+        assert!(msg.average_fuel_economy.is_some());
     }
 }
