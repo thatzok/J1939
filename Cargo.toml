@@ -1,6 +1,6 @@
 [package]
 name = "j1939"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Yorick de Wid <ydewid@gmail.com>"]
 edition = "2024"
 rust-version = "1.85.0"
