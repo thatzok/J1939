@@ -87,6 +87,9 @@ fn decode_data(pgn: PGN, data: &[u8]) {
             println!("  Request PGN: {:?}", protocol::request_from_pdu(data));
         }
         PGN::TimeDate => {
+            // TimeDate currently uses Debug formatting for its decoded representation,
+            // unlike other messages in this function that use Display. This is
+            // intentional because TimeDate does not provide a custom Display format.
             println!("  {:?}", TimeDate::from_pdu(data));
         }
         _ => {
