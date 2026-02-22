@@ -52,6 +52,13 @@ $ cargo run --example j1939decode 0x0CB34A29
 
 This runs a J1939 ID decoder on the ID '0x0CB34A29'. Each of the J1939 aid properties can be accessed with this crate.
 
+```sh
+$ cargo run --example j1939decode 0x18FEE6EE#243412024029837D
+```
+
+This runs a J1939 decoder on the ID '0x18FEE6EE' and the data '243412024029837D' (which is PGN TimeDate).
+
+
 ## no_std
 
 This crate supports no_std. By default the crate creates no_std targets which means you can use the J1939 crate on embedded systems that do not support dynamic allocation.

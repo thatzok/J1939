@@ -1,12 +1,101 @@
 use std::env;
 
 use j1939::Id;
+use j1939::PGN;
+use j1939::diagnostic;
+use j1939::protocol;
+use j1939::spn::*;
 
 fn usage() {
     println!("Usage: j1939decode <input>");
     println!();
     println!("Options:");
     println!("  <input>     29-bit CAN ID in hexadecimal format (0x18EAFF00)");
+    println!("              or CAN ID and data separated by '#' (0x18FEE6EE#243412024029837D)");
+}
+
+fn decode_data(pgn: PGN, data: &[u8]) {
+    println!("Data Decoded:");
+    match pgn {
+        PGN::TorqueSpeedControl1 => {
+            println!("  {}", TorqueSpeedControl1Message::from_pdu(data));
+        }
+        PGN::ElectronicEngineController1 => {
+            println!("  {}", ElectronicEngineController1Message::from_pdu(data));
+        }
+        PGN::ElectronicEngineController2 => {
+            println!("  {}", ElectronicEngineController2Message::from_pdu(data));
+        }
+        PGN::ElectronicEngineController3 => {
+            println!("  {}", ElectronicEngineController3Message::from_pdu(data));
+        }
+        PGN::ElectronicBrakeController1 => {
+            println!("  {}", ElectronicBrakeController1Message::from_pdu(data));
+        }
+        PGN::AmbientConditions => {
+            println!("  {}", AmbientConditionsMessage::from_pdu(data));
+        }
+        PGN::VehiclePosition => {
+            println!("  {}", VehiclePositionMessage::from_pdu(data));
+        }
+        PGN::FuelEconomy => {
+            println!("  {}", FuelEconomyMessage::from_pdu(data));
+        }
+        PGN::EngineFluidLevelPressure1 => {
+            println!("  {}", EngineFluidLevelPressure1Message::from_pdu(data));
+        }
+        PGN::FuelConsumption => {
+            println!("  {}", FuelConsumptionMessage::from_pdu(data));
+        }
+        PGN::VehicleDistance => {
+            println!("  {}", VehicleDistanceMessage::from_pdu(data));
+        }
+        PGN::FanDrive => {
+            println!("  {}", FanDriveMessage::from_pdu(data));
+        }
+        PGN::Shutdown => {
+            println!("  {}", ShutdownMessage::from_pdu(data));
+        }
+        PGN::EngineTemperature1 => {
+            println!("  {}", EngineTemperature1Message::from_pdu(data));
+        }
+        PGN::InletExhaustConditions1 => {
+            println!("  {}", InletExhaustConditions1Message::from_pdu(data));
+        }
+        PGN::VehicleElectricalPower1 => {
+            println!("  {}", VehicleElectricalPowerMessage::from_pdu(data));
+        }
+        PGN::EngineFluidLevelPressure2 => {
+            println!("  {}", EngineFluidLevelPressure2Message::from_pdu(data));
+        }
+        PGN::AuxiliaryInputOutputStatus => {
+            println!("  {}", CabIlluminationMessage::from_pdu(data));
+        }
+        PGN::ECUHistory => {
+            println!("  {}", ECUHistoryMessage::from_pdu(data));
+        }
+        PGN::TANKInformation1 => {
+            println!("  {}", TankInformation1Message::from_pdu(data));
+        }
+        PGN::PowerTakeoffInformation => {
+            println!("  {}", PowerTakeoffInformationMessage::from_pdu(data));
+        }
+        PGN::DiagnosticMessage1 => {
+            println!("  {}", diagnostic::Message1::from_pdu(data));
+        }
+        PGN::Request => {
+            println!("  Request PGN: {:?}", protocol::request_from_pdu(data));
+        }
+        PGN::TimeDate => {
+            // TimeDate currently uses Debug formatting for its decoded representation,
+            // unlike other messages in this function that use Display. This is
+            // intentional because TimeDate does not provide a custom Display format.
+            println!("  {:?}", TimeDate::from_pdu(data));
+        }
+        _ => {
+            println!("  Unknown PGN for data decoding.");
+        }
+    }
 }
 
 fn main() {
@@ -17,48 +106,64 @@ fn main() {
         return;
     }
 
-    let id_str = input.unwrap();
-    if !id_str.starts_with("0x") {
-        usage();
-        return;
-    }
+    let input_str = input.unwrap();
+    let parts: Vec<&str> = input_str.split('#').collect();
 
-    let id_raw = u32::from_str_radix(id_str.trim_start_matches("0x"), 16).expect("Invalid ID");
+    let id_str = parts[0];
+    let id_raw = if id_str.starts_with("0x") {
+        u32::from_str_radix(id_str.trim_start_matches("0x"), 16).expect("Invalid ID")
+    } else {
+        u32::from_str_radix(id_str, 16).expect("Invalid ID")
+    };
 
     let id = Id::new(id_raw);
 
     println!("ID");
-    println!(" Hex: 0x{:X?}", id.as_raw());
+    println!(" Hex: 0x{:08X}", id.as_raw());
     println!(" Dec: {}", id.as_raw());
     println!(" Bin: {:029b}", id.as_raw());
-    println!("Priority");
-    println!(" Hex: 0x{:X?}", id.priority());
-    println!(" Dec: {}", id.priority());
-    println!(" Bin: {:03b}", id.priority());
+    println!("Priority: {}", id.priority());
     println!("Data Page (DP): {}", id.data_page());
     println!("Parameter Group Number (PGN): {:?}", id.pgn());
-    println!(" Hex: 0x{:X?}", id.pgn_raw());
+    println!(" Hex: 0x{:04X}", id.pgn_raw());
     println!(" Dec: {}", id.pgn_raw());
-    println!(" Bin: {:024b}", id.pgn_raw());
     println!("PDU Format: {:?}", id.pdu_format());
     println!("Broadcast: {}", id.is_broadcast());
 
     if let Some(ge) = id.group_extension() {
-        println!("Group Extension (GE)/PDU Specific (PS)");
-        println!(" Hex: 0x{:X?}", ge);
-        println!(" Dec: {}", ge);
-        println!(" Bin: {:08b}", ge);
+        println!(
+            "Group Extension (GE)/PDU Specific (PS): 0x{:02X} ({})",
+            ge, ge
+        );
     }
 
     if let Some(da) = id.destination_address() {
-        println!("Destination Address (DA)");
-        println!(" Hex: 0x{:X?}", da);
-        println!(" Dec: {}", da);
-        println!(" Bin: {:08b}", da);
+        println!("Destination Address (DA): 0x{:02X} ({})", da, da);
     }
 
-    println!("Source Address (SA)");
-    println!(" Hex: 0x{:X?}", id.source_address());
-    println!(" Dec: {}", id.source_address());
-    println!(" Bin: {:08b}", id.source_address());
+    println!(
+        "Source Address (SA): 0x{:02X} ({})",
+        id.source_address(),
+        id.source_address()
+    );
+
+    if parts.len() > 1 {
+        let data_str = parts[1];
+
+        if data_str.len() % 2 != 0 {
+            eprintln!("Invalid data: hex string must have an even number of characters");
+            return;
+        }
+
+        let mut data = Vec::new();
+        for i in (0..data_str.len()).step_by(2) {
+            let byte = u8::from_str_radix(&data_str[i..i + 2], 16).expect("Invalid data byte");
+            data.push(byte);
+        }
+        println!();
+        println!("Data Hex: {:02X?}", data);
+        if !data.is_empty() {
+            decode_data(id.pgn(), &data);
+        }
+    }
 }

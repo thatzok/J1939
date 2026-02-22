@@ -3,7 +3,7 @@ use crate::{slots, PDU_NOT_AVAILABLE};
 //
 // Time/Date
 //
-
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct TimeDate {
     /// Year.
     pub year: i32,
