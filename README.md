@@ -56,7 +56,7 @@ This runs a J1939 ID decoder on the ID '0x0CB34A29'. Each of the J1939 aid prope
 $ cargo run --example j1939decode 0x18FEE6EE#243412024029837D
 ```
 
-This runs a J1939 decoder on the ID '0x18FEE6EE' and the data '0x243412024029837D' (which is PGN TimeDate).
+This runs a J1939 decoder on the ID '0x18FEE6EE' and the data '243412024029837D' (which is PGN TimeDate).
 
 
 ## no_std
