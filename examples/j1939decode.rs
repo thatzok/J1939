@@ -149,12 +149,16 @@ fn main() {
 
     if parts.len() > 1 {
         let data_str = parts[1];
+
+        if data_str.len() % 2 != 0 {
+            eprintln!("Invalid data: hex string must have an even number of characters");
+            return;
+        }
+
         let mut data = Vec::new();
         for i in (0..data_str.len()).step_by(2) {
-            if i + 2 <= data_str.len() {
-                let byte = u8::from_str_radix(&data_str[i..i + 2], 16).expect("Invalid data byte");
-                data.push(byte);
-            }
+            let byte = u8::from_str_radix(&data_str[i..i + 2], 16).expect("Invalid data byte");
+            data.push(byte);
         }
         println!();
         println!("Data Hex: {:02X?}", data);
