@@ -47,8 +47,8 @@ pub enum PGN {
     ElectronicTransmissionController2,
     /// TI1 - TANK Information 1.
     TANKInformation1,
-    /// TCO1 - Tachoraph.
-    Tachoraph,
+    /// TCO1 - Tachograph.
+    Tachograph,
     /// EH - ECU History.
     ECUHistory,
     /// FD - Fan Drive.
@@ -97,6 +97,8 @@ pub enum PGN {
     ElectronicEngineController3,
     /// VD - Vehicle Distance.
     VehicleDistance,
+    /// VDHR - High Resolution Vehicle Distance.
+    HighResolutionVehicleDistance,
     /// EC - Engine Configuration.
     EngineConfiguration,
     /// SHUTDOWN - Shutdown.
@@ -215,7 +217,7 @@ impl From<u32> for PGN {
             61_444 => PGN::ElectronicEngineController1,
             61_445 => PGN::ElectronicTransmissionController2,
             65_110 => PGN::TANKInformation1,
-            65_132 => PGN::Tachoraph,
+            65_132 => PGN::Tachograph,
             65_201 => PGN::ECUHistory,
             65_213 => PGN::FanDrive,
             65_214 => PGN::ElectronicEngineController4,
@@ -232,6 +234,7 @@ impl From<u32> for PGN {
             65_244 => PGN::IdleOperation,
             65_247 => PGN::ElectronicEngineController3,
             65_248 => PGN::VehicleDistance,
+            65_217 => PGN::HighResolutionVehicleDistance,
             65_251 => PGN::EngineConfiguration,
             65_252 => PGN::Shutdown,
             65_253 => PGN::EngineHoursRevolutions,
@@ -299,7 +302,7 @@ impl From<PGN> for u32 {
             PGN::ElectronicEngineController2 => 61_443,
             PGN::ElectronicTransmissionController2 => 61_445,
             PGN::TANKInformation1 => 65_110,
-            PGN::Tachoraph => 65_132,
+            PGN::Tachograph => 65_132,
             PGN::ECUHistory => 65_201,
             PGN::FanDrive => 65_213,
             PGN::ElectronicEngineController4 => 65_214,
@@ -316,6 +319,7 @@ impl From<PGN> for u32 {
             PGN::IdleOperation => 65_244,
             PGN::ElectronicEngineController3 => 65_247,
             PGN::VehicleDistance => 65_248,
+            PGN::HighResolutionVehicleDistance => 65_217,
             PGN::EngineConfiguration => 65_251,
             PGN::Shutdown => 65_252,
             PGN::EngineHoursRevolutions => 65_253,
