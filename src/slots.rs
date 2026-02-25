@@ -590,6 +590,29 @@ pub mod hour_offset {
     }
 }
 
+pub mod id {
+    const RESOLUTION: super::Param = super::Param {
+        scale: 1.0,
+        offset: 0.0,
+        limit_lower: 0.0,
+        limit_upper: 250.0,
+    };
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn dec(value: u8) -> Option<u8> {
+        if value == crate::PDU_NOT_AVAILABLE {
+            return None;
+        }
+
+        Some(RESOLUTION.dec(f32::from(value)) as u8)
+    }
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn enc(value: Option<u8>) -> u8 {
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

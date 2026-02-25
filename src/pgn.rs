@@ -151,6 +151,8 @@ pub enum PGN {
     WaterInFuelIndicator,
     /// ACKM - Acknowledgment Message.
     AcknowledgmentMessage,
+    /// RESET - Reset.
+    Reset,
     /// CI - Component Identification.
     ComponentIdentification,
     /// VI - Vehicle Identification.
@@ -205,6 +207,7 @@ impl From<u32> for PGN {
             49_152 => PGN::ProprietarilyConfigurableMessage16,
             51_456 => PGN::Request2,
             51_712 => PGN::Transfer,
+            56_832 => PGN::Reset,
             59_392 => PGN::AcknowledgmentMessage,
             59_904 => PGN::Request,
             60_160 => PGN::TransportProtocolDataTransfer,
@@ -290,6 +293,7 @@ impl From<PGN> for u32 {
             PGN::ProprietarilyConfigurableMessage16 => 49_152,
             PGN::Request2 => 51_456,
             PGN::Transfer => 51_712,
+            PGN::Reset => 56_832,
             PGN::AcknowledgmentMessage => 59_392,
             PGN::Request => 59_904,
             PGN::TransportProtocolDataTransfer => 60_160,

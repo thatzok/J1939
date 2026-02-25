@@ -2058,6 +2058,193 @@ impl core::fmt::Display for EngineFluidLevelPressure2Message {
     }
 }
 
+//
+// Reset (PGN 56832)
+//
+
+pub struct ResetMessage {
+    /// Command signal used to reset the PGNs and parameters as defined in Table SPN988_A.
+    pub trip_group_1: Option<bool>,
+    /// Command signal used to reset proprietary parameters associated with a trip but not
+    /// defined within this document.
+    pub trip_group_2_proprietary: Option<bool>,
+    /// Identification of component needing service.
+    pub service_component_identification: Option<u8>,
+    /// Command signal used to reset the engine rebuild hours.
+    pub engine_build_hours_reset: Option<bool>,
+    /// Used to reset the straight ahead position for a steering sensor in the steering
+    /// column or a steering controller's straight ahead position on any steerable axle.
+    pub steering_straight_ahead_position_reset: Option<bool>,
+    /// Command signal used to reset the ignition controller average, maximum, and minimum
+    /// level tracking of the spark plug secondary voltages and to reset the learned misfire rate.
+    pub engine_spark_plug_secondary_voltage_tracking_reset: Option<bool>,
+    /// Used to reset the maintenance hour counter for an engine ignition control module.
+    pub engine_ignition_control_maintenance_hours_reset: Option<bool>,
+    /// Used to reset the bin lift count as reported in PGN 64594.
+    pub bin_lift_count_reset: Option<bool>,
+    /// Command signal used to initiate change in the tire configuration of the vehicle system.
+    pub tire_configuration_information: Option<bool>,
+    /// Command signal used to initiate change in the tire sensor identification information.
+    pub tire_sensor_information: Option<bool>,
+}
+
+impl ResetMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
+    #[must_use]
+    pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(
+            pdu.len() >= 8,
+            "ResetMessage::from_pdu requires at least 8 bytes, got {}",
+            pdu.len()
+        );
+        Self {
+            trip_group_1: slots::bool_from_value(pdu[0]),
+            trip_group_2_proprietary: slots::bool_from_value(pdu[0] >> 2),
+            service_component_identification: slots::id::dec(pdu[1]),
+            engine_build_hours_reset: slots::bool_from_value(pdu[2]),
+            steering_straight_ahead_position_reset: slots::bool_from_value(pdu[2] >> 2),
+            engine_spark_plug_secondary_voltage_tracking_reset: slots::bool_from_value(pdu[2] >> 4),
+            engine_ignition_control_maintenance_hours_reset: slots::bool_from_value(pdu[2] >> 6),
+            bin_lift_count_reset: slots::bool_from_value(pdu[3]),
+            tire_configuration_information: slots::bool_from_value(pdu[3] >> 2),
+            tire_sensor_information: slots::bool_from_value(pdu[3] >> 4),
+        }
+    }
+
+    #[must_use]
+    pub fn to_pdu(&self) -> [u8; 8] {
+        [
+            slots::bool_to_value(self.trip_group_1)
+                | (slots::bool_to_value(self.trip_group_2_proprietary) << 2)
+                | 0xF0,
+            slots::id::enc(self.service_component_identification),
+            slots::bool_to_value(self.engine_build_hours_reset)
+                | (slots::bool_to_value(self.steering_straight_ahead_position_reset) << 2)
+                | (slots::bool_to_value(self.engine_spark_plug_secondary_voltage_tracking_reset) << 4)
+                | (slots::bool_to_value(self.engine_ignition_control_maintenance_hours_reset) << 6),
+            slots::bool_to_value(self.bin_lift_count_reset)
+                | (slots::bool_to_value(self.tire_configuration_information) << 2)
+                | (slots::bool_to_value(self.tire_sensor_information) << 4)
+                | 0xC0,
+            0xFF,
+            0xFF,
+            0xFF,
+            0xFF,
+        ]
+    }
+}
+
+impl core::fmt::Display for ResetMessage {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Trip Group 1: {:?}; Trip Group 2 Proprietary: {:?}; Service Component ID: {:?}; Engine Build Hours Reset: {:?}; Steering Position Reset: {:?}; Spark Plug Reset: {:?}; Maintenance Hours Reset: {:?}; Bin Lift Count Reset: {:?}; Tire Config Info: {:?}; Tire Sensor Info: {:?}",
+            self.trip_group_1,
+            self.trip_group_2_proprietary,
+            self.service_component_identification,
+            self.engine_build_hours_reset,
+            self.steering_straight_ahead_position_reset,
+            self.engine_spark_plug_secondary_voltage_tracking_reset,
+            self.engine_ignition_control_maintenance_hours_reset,
+            self.bin_lift_count_reset,
+            self.tire_configuration_information,
+            self.tire_sensor_information
+        )
+    }
+}
+
+//
+// Acknowledgment (PGN 59392)
+//
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AcknowledgmentType {
+    /// Positive Acknowledgment
+    Positive,
+    /// Negative Acknowledgment
+    Negative,
+    /// Access Denied
+    AccessDenied,
+    /// Cannot respond (e.g. busy)
+    Busy,
+}
+
+impl AcknowledgmentType {
+    #[must_use]
+    pub fn from_value(value: u8) -> Option<Self> {
+        match value {
+            0 => Some(Self::Positive),
+            1 => Some(Self::Negative),
+            2 => Some(Self::AccessDenied),
+            3 => Some(Self::Busy),
+            _ => None,
+        }
+    }
+
+    #[must_use]
+    pub fn to_value(self) -> u8 {
+        match self {
+            Self::Positive => 0,
+            Self::Negative => 1,
+            Self::AccessDenied => 2,
+            Self::Busy => 3,
+        }
+    }
+}
+
+pub struct AcknowledgmentMessage {
+    /// Control byte indicating the type of acknowledgment.
+    pub control_byte: Option<AcknowledgmentType>,
+    /// Group function value related to the acknowledgment.
+    pub group_function_value: u8,
+    /// Parameter Group Number being acknowledged.
+    pub pgn: crate::pgn::PGN,
+}
+
+impl AcknowledgmentMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
+    #[must_use]
+    pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(
+            pdu.len() >= 8,
+            "AcknowledgmentMessage::from_pdu requires at least 8 bytes, got {}",
+            pdu.len()
+        );
+        Self {
+            control_byte: AcknowledgmentType::from_value(pdu[0]),
+            group_function_value: pdu[1],
+            pgn: crate::pgn::PGN::from_le_bytes([pdu[5], pdu[6], pdu[7]]),
+        }
+    }
+
+    #[must_use]
+    pub fn to_pdu(&self) -> [u8; 8] {
+        let pgn_bytes = self.pgn.to_le_bytes();
+        [
+            self.control_byte.map_or(0xFF, AcknowledgmentType::to_value),
+            self.group_function_value,
+            0xFF, // Reserved
+            0xFF, // Reserved
+            0xFF, // Reserved
+            pgn_bytes[0],
+            pgn_bytes[1],
+            pgn_bytes[2],
+        ]
+    }
+}
+
+impl core::fmt::Display for AcknowledgmentMessage {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Acknowledgment: {:?}; Group Function: {}; PGN: {:?}",
+            self.control_byte, self.group_function_value, self.pgn
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2732,5 +2919,85 @@ mod tests {
         assert!(msg.fuel_rate.is_some());
         assert!(msg.instantaneous_fuel_economy.is_some());
         assert!(msg.average_fuel_economy.is_some());
+    }
+
+    #[test]
+    fn reset_message_roundtrip() {
+        let msg = ResetMessage {
+            trip_group_1: Some(true),
+            trip_group_2_proprietary: Some(false),
+            service_component_identification: Some(42),
+            engine_build_hours_reset: Some(true),
+            steering_straight_ahead_position_reset: Some(false),
+            engine_spark_plug_secondary_voltage_tracking_reset: Some(true),
+            engine_ignition_control_maintenance_hours_reset: Some(false),
+            bin_lift_count_reset: Some(true),
+            tire_configuration_information: Some(false),
+            tire_sensor_information: Some(true),
+        };
+        let pdu = msg.to_pdu();
+        let msg2 = ResetMessage::from_pdu(&pdu);
+        assert_eq!(msg.trip_group_1, msg2.trip_group_1);
+        assert_eq!(
+            msg.trip_group_2_proprietary,
+            msg2.trip_group_2_proprietary
+        );
+        assert_eq!(
+            msg.service_component_identification,
+            msg2.service_component_identification
+        );
+        assert_eq!(msg.engine_build_hours_reset, msg2.engine_build_hours_reset);
+        assert_eq!(
+            msg.steering_straight_ahead_position_reset,
+            msg2.steering_straight_ahead_position_reset
+        );
+        assert_eq!(
+            msg.engine_spark_plug_secondary_voltage_tracking_reset,
+            msg2.engine_spark_plug_secondary_voltage_tracking_reset
+        );
+        assert_eq!(
+            msg.engine_ignition_control_maintenance_hours_reset,
+            msg2.engine_ignition_control_maintenance_hours_reset
+        );
+        assert_eq!(msg.bin_lift_count_reset, msg2.bin_lift_count_reset);
+        assert_eq!(
+            msg.tire_configuration_information,
+            msg2.tire_configuration_information
+        );
+        assert_eq!(msg.tire_sensor_information, msg2.tire_sensor_information);
+    }
+
+    #[test]
+    fn acknowledgment_message_roundtrip() {
+        let msg = AcknowledgmentMessage {
+            control_byte: Some(AcknowledgmentType::Negative),
+            group_function_value: 0x80,
+            pgn: crate::pgn::PGN::Tachograph,
+        };
+        let pdu = msg.to_pdu();
+        let msg2 = AcknowledgmentMessage::from_pdu(&pdu);
+        assert_eq!(msg.control_byte, msg2.control_byte);
+        assert_eq!(msg.group_function_value, msg2.group_function_value);
+        assert_eq!(msg.pgn, msg2.pgn);
+    }
+
+    #[test]
+    fn packet_1cdeee17_roundtrip() {
+        // 1CDEEE17#FCFFFFFFFFFFFFFF
+        // PGN: 56832 (Reset)
+        let data = [0xFC, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+        let msg = ResetMessage::from_pdu(&data);
+        let encoded = msg.to_pdu();
+        assert_eq!(data, encoded);
+    }
+
+    #[test]
+    fn packet_1ce8ffee_roundtrip() {
+        // 1CE8FFEE#00FFFFFFFF00DE00
+        // PGN: 59392 (Acknowledgment Message)
+        let data = [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xDE, 0x00];
+        let msg = AcknowledgmentMessage::from_pdu(&data);
+        let encoded = msg.to_pdu();
+        assert_eq!(data, encoded);
     }
 }
