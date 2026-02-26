@@ -439,6 +439,40 @@ pub mod liquid_fuel_usage {
     }
 }
 
+// High-resolution distance: SAEds09 (5 m/bit), used in PGN 65217
+pub mod distance5m {
+    const RESOLUTION: super::Param = super::Param {
+        scale: 5.0,
+        offset: 0.0,
+        limit_lower: 0.0,
+        limit_upper: 21_055_406_075.0,
+    };
+
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
+    pub fn dec(value: [u8; 4]) -> Option<u32> {
+        if value == [crate::PDU_NOT_AVAILABLE; 4] {
+            return None;
+        }
+
+        Some(RESOLUTION.dec(u32::from_le_bytes(value) as f32) as u32)
+    }
+
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
+    pub fn enc(value: Option<u32>) -> [u8; 4] {
+        value.map_or([crate::PDU_NOT_AVAILABLE; 4], |v| {
+            (RESOLUTION.enc(v as f32) as u32).to_le_bytes()
+        })
+    }
+}
+
 pub mod distance {
     const RESOLUTION: super::Param = super::Param {
         scale: 0.125,
@@ -460,6 +494,32 @@ pub mod distance {
     pub fn enc(value: Option<u32>) -> [u8; 4] {
         value.map_or([crate::PDU_NOT_AVAILABLE; 4], |v| {
             (RESOLUTION.enc(v as f32) as u32).to_le_bytes()
+        })
+    }
+}
+
+// Linear velocity SAEvl02 (1/256 km/h per bit), used in PGN 65132 bytes 7-8
+pub mod velocity_linear2 {
+    const RESOLUTION: super::Param = super::Param {
+        scale: 1.0 / 256.0,
+        offset: 0.0,
+        limit_lower: 0.0,
+        limit_upper: 250.99609375,
+    };
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn dec(value: [u8; 2]) -> Option<u16> {
+        if value == [crate::PDU_NOT_AVAILABLE; 2] {
+            return None;
+        }
+
+        Some(RESOLUTION.dec(f32::from(u16::from_le_bytes(value))) as u16)
+    }
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn enc(value: Option<u16>) -> [u8; 2] {
+        value.map_or([crate::PDU_NOT_AVAILABLE; 2], |v| {
+            (RESOLUTION.enc(f32::from(v)) as u16).to_le_bytes()
         })
     }
 }
@@ -486,6 +546,70 @@ pub mod time {
         value.map_or([crate::PDU_NOT_AVAILABLE; 4], |v| {
             (RESOLUTION.enc(v as f32) as u32).to_le_bytes()
         })
+    }
+}
+
+// Offsets for Time/Date local offsets
+pub mod minute_offset {
+    const RESOLUTION: super::Param = super::Param {
+        scale: 1.0,
+        offset: -125.0,
+        limit_lower: -125.0,
+        limit_upper: 125.0,
+    };
+
+    pub fn dec(value: u8) -> Option<i8> {
+        if value == crate::PDU_NOT_AVAILABLE {
+            return None;
+        }
+        Some(RESOLUTION.dec(f32::from(value)) as i8)
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn enc(value: Option<i8>) -> u8 {
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
+    }
+}
+
+pub mod hour_offset {
+    const RESOLUTION: super::Param = super::Param {
+        scale: 1.0,
+        offset: -125.0,
+        limit_lower: -125.0,
+        limit_upper: 125.0,
+    };
+
+    pub fn dec(value: u8) -> Option<i8> {
+        if value == crate::PDU_NOT_AVAILABLE { return None; }
+        Some(RESOLUTION.dec(f32::from(value)) as i8)
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn enc(value: Option<i8>) -> u8 {
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
+    }
+}
+
+pub mod id {
+    const RESOLUTION: super::Param = super::Param {
+        scale: 1.0,
+        offset: 0.0,
+        limit_lower: 0.0,
+        limit_upper: 250.0,
+    };
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn dec(value: u8) -> Option<u8> {
+        if value == crate::PDU_NOT_AVAILABLE {
+            return None;
+        }
+
+        Some(RESOLUTION.dec(f32::from(value)) as u8)
+    }
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn enc(value: Option<u8>) -> u8 {
+        value.map_or(crate::PDU_NOT_AVAILABLE, |v| RESOLUTION.enc(f32::from(v)) as u8)
     }
 }
 

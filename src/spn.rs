@@ -17,14 +17,22 @@ pub struct TimeDate {
     pub minute: u32,
     /// Second.
     pub second: u32,
+    /// Local minute offset (SPN 1601), minutes relative to UTC. None = Not available.
+    pub local_minute_offset: Option<i8>,
+    /// Local hour offset (SPN 1602), hours relative to UTC. None = Not available.
+    pub local_hour_offset: Option<i8>,
 }
 
 impl TimeDate {
     /// # Panics
-    /// Panics if `pdu` has fewer than 6 bytes.
+    /// Panics if `pdu` has fewer than 8 bytes.
     #[must_use]
     pub fn from_pdu(pdu: &[u8]) -> Self {
         assert!(pdu.len() >= 6, "TimeDate::from_pdu requires at least 6 bytes, got {}", pdu.len());
+        let local_minute_offset = if pdu.len() >= 7 { Some(pdu[6]) } else { None }
+            .and_then(slots::minute_offset::dec);
+        let local_hour_offset = if pdu.len() >= 8 { Some(pdu[7]) } else { None }
+            .and_then(slots::hour_offset::dec);
         Self {
             year: i32::from(pdu[5]) + 1985,
             month: u32::from(pdu[3]),
@@ -34,6 +42,8 @@ impl TimeDate {
             minute: u32::from(pdu[1]),
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             second: (f32::from(pdu[0]) * 0.25) as u32,
+            local_minute_offset,
+            local_hour_offset,
         }
     }
 
@@ -47,8 +57,8 @@ impl TimeDate {
             self.month as u8,
             (self.day * 4) as u8,
             (self.year - 1985) as u8,
-            0xff, // TODO: Add timezone
-            0xff, // TODO: Add timezone
+            slots::minute_offset::enc(self.local_minute_offset),
+            slots::hour_offset::enc(self.local_hour_offset),
         ]
     }
 
@@ -79,6 +89,8 @@ impl TimeDate {
             hour: dt.hour(),
             minute: dt.minute(),
             second: dt.second(),
+            local_minute_offset: None,
+            local_hour_offset: None,
         }
     }
 }
@@ -982,6 +994,234 @@ impl ECUHistoryMessage {
     }
 }
 
+//
+// High Resolution Vehicle Distance (PGN 65217)
+//
+
+pub struct HighResolutionVehicleDistanceMessage {
+    /// Accumulated distance traveled by the vehicle during its operation (meters).
+    pub total_vehicle_distance_m: Option<u32>,
+    /// Distance traveled during trip (meters).
+    pub trip_distance_m: Option<u32>,
+}
+
+impl HighResolutionVehicleDistanceMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
+    #[must_use]
+    pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "HighResolutionVehicleDistanceMessage::from_pdu requires at least 8 bytes, got {}", pdu.len());
+        Self {
+            total_vehicle_distance_m: slots::distance5m::dec([pdu[0], pdu[1], pdu[2], pdu[3]]),
+            trip_distance_m: slots::distance5m::dec([pdu[4], pdu[5], pdu[6], pdu[7]]),
+        }
+    }
+
+    #[must_use]
+    pub fn to_pdu(&self) -> [u8; 8] {
+        [
+            slots::distance5m::enc(self.total_vehicle_distance_m)[0],
+            slots::distance5m::enc(self.total_vehicle_distance_m)[1],
+            slots::distance5m::enc(self.total_vehicle_distance_m)[2],
+            slots::distance5m::enc(self.total_vehicle_distance_m)[3],
+            slots::distance5m::enc(self.trip_distance_m)[0],
+            slots::distance5m::enc(self.trip_distance_m)[1],
+            slots::distance5m::enc(self.trip_distance_m)[2],
+            slots::distance5m::enc(self.trip_distance_m)[3],
+        ]
+    }
+}
+
+impl core::fmt::Display for HighResolutionVehicleDistanceMessage {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Trip distance (m): {}; Total vehicle distance (m): {}",
+            self.trip_distance_m.unwrap_or(0),
+            self.total_vehicle_distance_m.unwrap_or(0)
+        )
+    }
+}
+
+//
+// Tachograph (PGN 65132)
+//
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum DriverWorkingState {
+    RestSleeping,
+    DriverAvailableShortBreak,
+    Work,
+    Drive,
+}
+
+impl DriverWorkingState {
+    #[must_use]
+    pub fn from_value(value: u8) -> Option<Self> {
+        match value & 0b111 {
+            0b000 => Some(Self::RestSleeping),
+            0b001 => Some(Self::DriverAvailableShortBreak),
+            0b010 => Some(Self::Work),
+            0b011 => Some(Self::Drive),
+            // 100,101 = reserved; 110 = error; 111 = N/A
+            _ => None,
+        }
+    }
+
+    #[must_use]
+    pub fn to_value(v: Option<Self>) -> u8 {
+        match v {
+            Some(Self::RestSleeping) => 0b000,
+            Some(Self::DriverAvailableShortBreak) => 0b001,
+            Some(Self::Work) => 0b010,
+            Some(Self::Drive) => 0b011,
+            None => 0b111, // Not available
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum DriverTimeRelatedStates {
+    NormalNoLimits,
+    Limit1_15minBefore4_5h,
+    Limit2_4_5hReached,
+    Limit3_15minBefore9h,
+    Limit4_9hReached,
+    Limit5_15minBefore16h,
+    Limit6_16hReached,
+    Other,
+}
+
+impl DriverTimeRelatedStates {
+    #[must_use]
+    pub fn from_value(value: u8) -> Option<Self> {
+        match value & 0b1111 {
+            0b0000 => Some(Self::NormalNoLimits),
+            0b0001 => Some(Self::Limit1_15minBefore4_5h),
+            0b0010 => Some(Self::Limit2_4_5hReached),
+            0b0011 => Some(Self::Limit3_15minBefore9h),
+            0b0100 => Some(Self::Limit4_9hReached),
+            0b0101 => Some(Self::Limit5_15minBefore16h),
+            0b0110 => Some(Self::Limit6_16hReached),
+            0b1101 => Some(Self::Other),
+            // 0111..1100 reserved; 1110 Error; 1111 N/A
+            _ => None,
+        }
+    }
+
+    #[must_use]
+    pub fn to_value(v: Option<Self>) -> u8 {
+        match v {
+            Some(Self::NormalNoLimits) => 0b0000,
+            Some(Self::Limit1_15minBefore4_5h) => 0b0001,
+            Some(Self::Limit2_4_5hReached) => 0b0010,
+            Some(Self::Limit3_15minBefore9h) => 0b0011,
+            Some(Self::Limit4_9hReached) => 0b0100,
+            Some(Self::Limit5_15minBefore16h) => 0b0101,
+            Some(Self::Limit6_16hReached) => 0b0110,
+            Some(Self::Other) => 0b1101,
+            None => 0b1111, // Not available
+        }
+    }
+}
+
+pub struct TachographMessage {
+    pub driver1_working_state: Option<DriverWorkingState>, // SPN 1612 (3 bits) at 1.1
+    pub driver2_working_state: Option<DriverWorkingState>, // SPN 1613 (3 bits) at 1.4
+    pub vehicle_motion: Option<bool>,                     // SPN 1611 (2 bits) at 1.7
+    pub driver1_time_states: Option<DriverTimeRelatedStates>, // SPN 1617 (4 bits) at 2.1
+    pub driver1_card_present: Option<bool>,               // SPN 1615 (2 bits) at 2.5
+    pub vehicle_overspeed: Option<bool>,                  // SPN 1614 (2 bits) at 2.7
+    pub driver2_time_states: Option<DriverTimeRelatedStates>, // SPN 1618 (4 bits) at 3.1
+    pub driver2_card_present: Option<bool>,               // SPN 1616 (2 bits) at 3.5
+    pub system_event: Option<bool>,                       // SPN 1622 (2 bits) at 4.1
+    pub handling_information: Option<bool>,               // SPN 1621 (2 bits) at 4.3
+    pub tachograph_performance: Option<bool>,             // SPN 1620 (2 bits) at 4.5
+    pub direction_indicator: Option<bool>,                // SPN 1619 (2 bits) at 4.7
+    pub tachograph_output_shaft_speed: Option<u16>,       // SPN 1623 bytes 5-6 SAEvr01
+    pub tachograph_vehicle_speed: Option<u16>,            // SPN 1624 bytes 7-8 SAEvl02
+}
+
+impl TachographMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
+    #[must_use]
+    pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(pdu.len() >= 8, "TachographMessage::from_pdu requires at least 8 bytes, got {}", pdu.len());
+        let b1 = pdu[0];
+        let b2 = pdu[1];
+        let b3 = pdu[2];
+        let b4 = pdu[3];
+        Self {
+            driver1_working_state: DriverWorkingState::from_value(b1 & 0b0000_0111),
+            driver2_working_state: DriverWorkingState::from_value((b1 >> 3) & 0b0000_0111),
+            vehicle_motion: slots::bool_from_value((b1 >> 6) & 0b0000_0011),
+            driver1_time_states: DriverTimeRelatedStates::from_value(b2 & 0b0000_1111),
+            driver1_card_present: slots::bool_from_value((b2 >> 4) & 0b0000_0011),
+            vehicle_overspeed: slots::bool_from_value((b2 >> 6) & 0b0000_0011),
+            driver2_time_states: DriverTimeRelatedStates::from_value(b3 & 0b0000_1111),
+            driver2_card_present: slots::bool_from_value((b3 >> 4) & 0b0000_0011),
+            system_event: slots::bool_from_value(b4 & 0b0000_0011),
+            handling_information: slots::bool_from_value((b4 >> 2) & 0b0000_0011),
+            tachograph_performance: slots::bool_from_value((b4 >> 4) & 0b0000_0011),
+            direction_indicator: slots::bool_from_value((b4 >> 6) & 0b0000_0011),
+            tachograph_output_shaft_speed: slots::rotational_velocity::dec([pdu[4], pdu[5]]),
+            tachograph_vehicle_speed: slots::velocity_linear2::dec([pdu[6], pdu[7]]),
+        }
+    }
+
+    #[must_use]
+    pub fn to_pdu(&self) -> [u8; 8] {
+        let mut b1 = 0u8;
+        b1 |= DriverWorkingState::to_value(self.driver1_working_state) & 0b0000_0111; // 1.1
+        b1 |= (DriverWorkingState::to_value(self.driver2_working_state) & 0b0000_0111) << 3; // 1.4
+        b1 |= (slots::bool_to_value(self.vehicle_motion) & 0b0000_0011) << 6; // 1.7
+
+        let mut b2 = 0u8;
+        b2 |= DriverTimeRelatedStates::to_value(self.driver1_time_states) & 0b0000_1111; // 2.1
+        b2 |= (slots::bool_to_value(self.driver1_card_present) & 0b0000_0011) << 4; // 2.5
+        b2 |= (slots::bool_to_value(self.vehicle_overspeed) & 0b0000_0011) << 6; // 2.7
+
+        let mut b3 = 0u8;
+        b3 |= DriverTimeRelatedStates::to_value(self.driver2_time_states) & 0b0000_1111; // 3.1
+        b3 |= (slots::bool_to_value(self.driver2_card_present) & 0b0000_0011) << 4; // 3.5
+        // bits 6-7 reserved: set to 'Not available' (11)
+        b3 |= 0b11 << 6;
+
+        let mut b4 = 0u8;
+        b4 |= slots::bool_to_value(self.system_event) & 0b0000_0011; // 4.1
+        b4 |= (slots::bool_to_value(self.handling_information) & 0b0000_0011) << 2; // 4.3
+        b4 |= (slots::bool_to_value(self.tachograph_performance) & 0b0000_0011) << 4; // 4.5
+        b4 |= (slots::bool_to_value(self.direction_indicator) & 0b0000_0011) << 6; // 4.7
+
+        [
+            b1,
+            b2,
+            b3,
+            b4,
+            slots::rotational_velocity::enc(self.tachograph_output_shaft_speed)[0],
+            slots::rotational_velocity::enc(self.tachograph_output_shaft_speed)[1],
+            slots::velocity_linear2::enc(self.tachograph_vehicle_speed)[0],
+            slots::velocity_linear2::enc(self.tachograph_vehicle_speed)[1],
+        ]
+    }
+}
+
+impl core::fmt::Display for TachographMessage {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "D1: {:?}, D2: {:?}, motion: {:?}, overspeed: {:?}, out_shaft_rpm: {:?}, veh_speed: {:?}",
+            self.driver1_working_state,
+            self.driver2_working_state,
+            self.vehicle_motion,
+            self.vehicle_overspeed,
+            self.tachograph_output_shaft_speed,
+            self.tachograph_vehicle_speed
+        )
+    }
+}
+
 impl core::fmt::Display for ECUHistoryMessage {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
@@ -1818,6 +2058,193 @@ impl core::fmt::Display for EngineFluidLevelPressure2Message {
     }
 }
 
+//
+// Reset (PGN 56832)
+//
+
+pub struct ResetMessage {
+    /// Command signal used to reset the PGNs and parameters as defined in Table SPN988_A.
+    pub trip_group_1: Option<bool>,
+    /// Command signal used to reset proprietary parameters associated with a trip but not
+    /// defined within this document.
+    pub trip_group_2_proprietary: Option<bool>,
+    /// Identification of component needing service.
+    pub service_component_identification: Option<u8>,
+    /// Command signal used to reset the engine rebuild hours.
+    pub engine_build_hours_reset: Option<bool>,
+    /// Used to reset the straight ahead position for a steering sensor in the steering
+    /// column or a steering controller's straight ahead position on any steerable axle.
+    pub steering_straight_ahead_position_reset: Option<bool>,
+    /// Command signal used to reset the ignition controller average, maximum, and minimum
+    /// level tracking of the spark plug secondary voltages and to reset the learned misfire rate.
+    pub engine_spark_plug_secondary_voltage_tracking_reset: Option<bool>,
+    /// Used to reset the maintenance hour counter for an engine ignition control module.
+    pub engine_ignition_control_maintenance_hours_reset: Option<bool>,
+    /// Used to reset the bin lift count as reported in PGN 64594.
+    pub bin_lift_count_reset: Option<bool>,
+    /// Command signal used to initiate change in the tire configuration of the vehicle system.
+    pub tire_configuration_information: Option<bool>,
+    /// Command signal used to initiate change in the tire sensor identification information.
+    pub tire_sensor_information: Option<bool>,
+}
+
+impl ResetMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
+    #[must_use]
+    pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(
+            pdu.len() >= 8,
+            "ResetMessage::from_pdu requires at least 8 bytes, got {}",
+            pdu.len()
+        );
+        Self {
+            trip_group_1: slots::bool_from_value(pdu[0]),
+            trip_group_2_proprietary: slots::bool_from_value(pdu[0] >> 2),
+            service_component_identification: slots::id::dec(pdu[1]),
+            engine_build_hours_reset: slots::bool_from_value(pdu[2]),
+            steering_straight_ahead_position_reset: slots::bool_from_value(pdu[2] >> 2),
+            engine_spark_plug_secondary_voltage_tracking_reset: slots::bool_from_value(pdu[2] >> 4),
+            engine_ignition_control_maintenance_hours_reset: slots::bool_from_value(pdu[2] >> 6),
+            bin_lift_count_reset: slots::bool_from_value(pdu[3]),
+            tire_configuration_information: slots::bool_from_value(pdu[3] >> 2),
+            tire_sensor_information: slots::bool_from_value(pdu[3] >> 4),
+        }
+    }
+
+    #[must_use]
+    pub fn to_pdu(&self) -> [u8; 8] {
+        [
+            slots::bool_to_value(self.trip_group_1)
+                | (slots::bool_to_value(self.trip_group_2_proprietary) << 2)
+                | 0xF0,
+            slots::id::enc(self.service_component_identification),
+            slots::bool_to_value(self.engine_build_hours_reset)
+                | (slots::bool_to_value(self.steering_straight_ahead_position_reset) << 2)
+                | (slots::bool_to_value(self.engine_spark_plug_secondary_voltage_tracking_reset) << 4)
+                | (slots::bool_to_value(self.engine_ignition_control_maintenance_hours_reset) << 6),
+            slots::bool_to_value(self.bin_lift_count_reset)
+                | (slots::bool_to_value(self.tire_configuration_information) << 2)
+                | (slots::bool_to_value(self.tire_sensor_information) << 4)
+                | 0xC0,
+            0xFF,
+            0xFF,
+            0xFF,
+            0xFF,
+        ]
+    }
+}
+
+impl core::fmt::Display for ResetMessage {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Trip Group 1: {:?}; Trip Group 2 Proprietary: {:?}; Service Component ID: {:?}; Engine Build Hours Reset: {:?}; Steering Position Reset: {:?}; Spark Plug Reset: {:?}; Maintenance Hours Reset: {:?}; Bin Lift Count Reset: {:?}; Tire Config Info: {:?}; Tire Sensor Info: {:?}",
+            self.trip_group_1,
+            self.trip_group_2_proprietary,
+            self.service_component_identification,
+            self.engine_build_hours_reset,
+            self.steering_straight_ahead_position_reset,
+            self.engine_spark_plug_secondary_voltage_tracking_reset,
+            self.engine_ignition_control_maintenance_hours_reset,
+            self.bin_lift_count_reset,
+            self.tire_configuration_information,
+            self.tire_sensor_information
+        )
+    }
+}
+
+//
+// Acknowledgment (PGN 59392)
+//
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AcknowledgmentType {
+    /// Positive Acknowledgment
+    Positive,
+    /// Negative Acknowledgment
+    Negative,
+    /// Access Denied
+    AccessDenied,
+    /// Cannot respond (e.g. busy)
+    Busy,
+}
+
+impl AcknowledgmentType {
+    #[must_use]
+    pub fn from_value(value: u8) -> Option<Self> {
+        match value {
+            0 => Some(Self::Positive),
+            1 => Some(Self::Negative),
+            2 => Some(Self::AccessDenied),
+            3 => Some(Self::Busy),
+            _ => None,
+        }
+    }
+
+    #[must_use]
+    pub fn to_value(self) -> u8 {
+        match self {
+            Self::Positive => 0,
+            Self::Negative => 1,
+            Self::AccessDenied => 2,
+            Self::Busy => 3,
+        }
+    }
+}
+
+pub struct AcknowledgmentMessage {
+    /// Control byte indicating the type of acknowledgment.
+    pub control_byte: Option<AcknowledgmentType>,
+    /// Group function value related to the acknowledgment.
+    pub group_function_value: u8,
+    /// Parameter Group Number being acknowledged.
+    pub pgn: crate::pgn::PGN,
+}
+
+impl AcknowledgmentMessage {
+    /// # Panics
+    /// Panics if `pdu` has fewer than 8 bytes.
+    #[must_use]
+    pub fn from_pdu(pdu: &[u8]) -> Self {
+        assert!(
+            pdu.len() >= 8,
+            "AcknowledgmentMessage::from_pdu requires at least 8 bytes, got {}",
+            pdu.len()
+        );
+        Self {
+            control_byte: AcknowledgmentType::from_value(pdu[0]),
+            group_function_value: pdu[1],
+            pgn: crate::pgn::PGN::from_le_bytes([pdu[5], pdu[6], pdu[7]]),
+        }
+    }
+
+    #[must_use]
+    pub fn to_pdu(&self) -> [u8; 8] {
+        let pgn_bytes = self.pgn.to_le_bytes();
+        [
+            self.control_byte.map_or(0xFF, AcknowledgmentType::to_value),
+            self.group_function_value,
+            0xFF, // Reserved
+            0xFF, // Reserved
+            0xFF, // Reserved
+            pgn_bytes[0],
+            pgn_bytes[1],
+            pgn_bytes[2],
+        ]
+    }
+}
+
+impl core::fmt::Display for AcknowledgmentMessage {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Acknowledgment: {:?}; Group Function: {}; PGN: {:?}",
+            self.control_byte, self.group_function_value, self.pgn
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2492,5 +2919,85 @@ mod tests {
         assert!(msg.fuel_rate.is_some());
         assert!(msg.instantaneous_fuel_economy.is_some());
         assert!(msg.average_fuel_economy.is_some());
+    }
+
+    #[test]
+    fn reset_message_roundtrip() {
+        let msg = ResetMessage {
+            trip_group_1: Some(true),
+            trip_group_2_proprietary: Some(false),
+            service_component_identification: Some(42),
+            engine_build_hours_reset: Some(true),
+            steering_straight_ahead_position_reset: Some(false),
+            engine_spark_plug_secondary_voltage_tracking_reset: Some(true),
+            engine_ignition_control_maintenance_hours_reset: Some(false),
+            bin_lift_count_reset: Some(true),
+            tire_configuration_information: Some(false),
+            tire_sensor_information: Some(true),
+        };
+        let pdu = msg.to_pdu();
+        let msg2 = ResetMessage::from_pdu(&pdu);
+        assert_eq!(msg.trip_group_1, msg2.trip_group_1);
+        assert_eq!(
+            msg.trip_group_2_proprietary,
+            msg2.trip_group_2_proprietary
+        );
+        assert_eq!(
+            msg.service_component_identification,
+            msg2.service_component_identification
+        );
+        assert_eq!(msg.engine_build_hours_reset, msg2.engine_build_hours_reset);
+        assert_eq!(
+            msg.steering_straight_ahead_position_reset,
+            msg2.steering_straight_ahead_position_reset
+        );
+        assert_eq!(
+            msg.engine_spark_plug_secondary_voltage_tracking_reset,
+            msg2.engine_spark_plug_secondary_voltage_tracking_reset
+        );
+        assert_eq!(
+            msg.engine_ignition_control_maintenance_hours_reset,
+            msg2.engine_ignition_control_maintenance_hours_reset
+        );
+        assert_eq!(msg.bin_lift_count_reset, msg2.bin_lift_count_reset);
+        assert_eq!(
+            msg.tire_configuration_information,
+            msg2.tire_configuration_information
+        );
+        assert_eq!(msg.tire_sensor_information, msg2.tire_sensor_information);
+    }
+
+    #[test]
+    fn acknowledgment_message_roundtrip() {
+        let msg = AcknowledgmentMessage {
+            control_byte: Some(AcknowledgmentType::Negative),
+            group_function_value: 0x80,
+            pgn: crate::pgn::PGN::Tachograph,
+        };
+        let pdu = msg.to_pdu();
+        let msg2 = AcknowledgmentMessage::from_pdu(&pdu);
+        assert_eq!(msg.control_byte, msg2.control_byte);
+        assert_eq!(msg.group_function_value, msg2.group_function_value);
+        assert_eq!(msg.pgn, msg2.pgn);
+    }
+
+    #[test]
+    fn packet_1cdeee17_roundtrip() {
+        // 1CDEEE17#FCFFFFFFFFFFFFFF
+        // PGN: 56832 (Reset)
+        let data = [0xFC, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+        let msg = ResetMessage::from_pdu(&data);
+        let encoded = msg.to_pdu();
+        assert_eq!(data, encoded);
+    }
+
+    #[test]
+    fn packet_1ce8ffee_roundtrip() {
+        // 1CE8FFEE#00FFFFFFFF00DE00
+        // PGN: 59392 (Acknowledgment Message)
+        let data = [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xDE, 0x00];
+        let msg = AcknowledgmentMessage::from_pdu(&data);
+        let encoded = msg.to_pdu();
+        assert_eq!(data, encoded);
     }
 }

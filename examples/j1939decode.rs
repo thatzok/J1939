@@ -50,6 +50,9 @@ fn decode_data(pgn: PGN, data: &[u8]) {
         PGN::VehicleDistance => {
             println!("  {}", VehicleDistanceMessage::from_pdu(data));
         }
+        PGN::HighResolutionVehicleDistance => {
+            println!("  {}", HighResolutionVehicleDistanceMessage::from_pdu(data));
+        }
         PGN::FanDrive => {
             println!("  {}", FanDriveMessage::from_pdu(data));
         }
@@ -76,6 +79,9 @@ fn decode_data(pgn: PGN, data: &[u8]) {
         }
         PGN::TANKInformation1 => {
             println!("  {}", TankInformation1Message::from_pdu(data));
+        }
+        PGN::Tachograph => {
+            println!("  {}", TachographMessage::from_pdu(data));
         }
         PGN::PowerTakeoffInformation => {
             println!("  {}", PowerTakeoffInformationMessage::from_pdu(data));

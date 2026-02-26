@@ -33,6 +33,8 @@ let timedate = j1939::spn::TimeDate {
     hour: 10,
     minute: 1,
     second: 58,
+    local_hour_offset: Some(0),
+    local_minute_offset: Some(0),
 };
 
 let id = j1939::IdBuilder::from_pgn(j1939::PGN::TimeDate)
